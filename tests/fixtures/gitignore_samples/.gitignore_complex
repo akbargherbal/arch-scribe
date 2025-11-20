@@ -1,0 +1,3 @@
+# Complex patterns
+**/*.tmp
+!important.tmp

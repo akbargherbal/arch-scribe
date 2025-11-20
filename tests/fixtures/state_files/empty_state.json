@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.2",
+  "metadata": {
+    "project_name": "Empty Project",
+    "project_type": "Unknown",
+    "last_updated": "",
+    "phase": "survey",
+    "total_sessions": 0,
+    "scan_stats": {},
+    "session_history": []
+  },
+  "systems": {},
+  "progress": {}
+}

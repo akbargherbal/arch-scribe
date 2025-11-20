@@ -1,0 +1,15 @@
+{
+  "schema_version": "2.2",
+  "metadata": {
+    "project_name": "Partial Project",
+    "total_sessions": 2
+  },
+  "systems": {
+    "Auth System": {
+      "description": "Handles authentication",
+      "completeness": 40,
+      "key_files": ["src/auth.py"],
+      "insights": ["Uses JWT tokens"]
+    }
+  }
+}
