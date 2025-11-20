@@ -2,71 +2,153 @@
 Integration tests for CLI command execution.
 """
 import pytest
+import sys
+import os
+import json
+from unittest.mock import patch
 
+# Add project root to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from arch_state import main, STATE_FILE
+
+@pytest.fixture
+def cli_runner(temp_dir, monkeypatch):
+    """Helper to run CLI commands in temp dir."""
+    monkeypatch.chdir(temp_dir)
+    
+    def run_cmd(args):
+        with patch.object(sys, 'argv', ["arch_state.py"] + args):
+            main()
+            
+    return run_cmd
 
 class TestCLIInit:
     """Test 'init' command."""
     
-    def test_init_creates_state_file(self):
+    def test_init_creates_state_file(self, cli_runner):
         """Test that init creates architecture.json."""
-        pass
+        cli_runner(["init", "Test Project"])
+        assert os.path.exists(STATE_FILE)
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            assert data["metadata"]["project_name"] == "Test Project"
     
-    def test_init_detects_project_type(self):
+    def test_init_detects_project_type(self, cli_runner, monkeypatch):
         """Test auto-detection of project type."""
-        pass
+        # Create a Django marker
+        with open("manage.py", "w") as f: f.write("")
+        
+        cli_runner(["init", "Django Project"])
+        
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            assert data["metadata"]["project_type"] == "Django Web Application"
 
 
 class TestCLIStatus:
     """Test 'status' command."""
     
-    def test_status_displays_metadata(self):
+    def test_status_displays_metadata(self, cli_runner, capsys):
         """Test that status shows project info."""
-        pass
-    
-    def test_status_shows_coverage(self):
-        """Test that coverage metrics are displayed."""
-        pass
+        cli_runner(["init", "Status Project"])
+        
+        # Clear capture from init
+        capsys.readouterr()
+        
+        cli_runner(["status"])
+        captured = capsys.readouterr()
+        
+        assert "Status Project" in captured.out
+        assert "Sessions:" in captured.out
+        assert "Coverage:" in captured.out
 
 
 class TestCLISystemCommands:
     """Test system manipulation commands."""
     
-    def test_add_command(self):
+    @pytest.fixture(autouse=True)
+    def setup_project(self, cli_runner):
+        cli_runner(["init", "Sys Project"])
+    
+    def test_add_command(self, cli_runner, capsys):
         """Test 'add' command creates system."""
-        pass
+        cli_runner(["add", "New System"])
+        captured = capsys.readouterr()
+        assert "Added system: New System" in captured.out
+        
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            assert "New System" in data["systems"]
     
-    def test_map_command(self):
+    def test_map_command(self, cli_runner):
         """Test 'map' command adds files to system."""
-        pass
+        cli_runner(["add", "Core"])
+        cli_runner(["map", "Core", "file1.py", "file2.py"])
+        
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            files = data["systems"]["Core"]["key_files"]
+            assert "file1.py" in files
+            assert "file2.py" in files
     
-    def test_update_command(self):
+    def test_update_command(self, cli_runner):
         """Test 'update' command modifies system metadata."""
-        pass
+        cli_runner(["add", "Core"])
+        cli_runner(["update", "Core", "--desc", "Core logic", "--comp", "50"])
+        
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            sys = data["systems"]["Core"]
+            assert sys["description"] == "Core logic"
+            assert sys["completeness"] == 50
     
-    def test_insight_command(self):
+    def test_insight_command(self, cli_runner):
         """Test 'insight' command adds insight."""
-        pass
+        cli_runner(["add", "Core"])
+        cli_runner(["insight", "Core", "Critical insight"])
+        
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            assert "Critical insight" in data["systems"]["Core"]["insights"]
     
-    def test_dep_command(self):
+    def test_dep_command(self, cli_runner, monkeypatch):
         """Test 'dep' command creates dependency."""
-        pass
+        cli_runner(["add", "A"])
+        cli_runner(["add", "B"])
+        
+        cli_runner(["dep", "A", "B", "Depends on it"])
+        
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+            deps = data["systems"]["A"]["dependencies"]
+            assert deps[0]["system"] == "B"
 
 
 class TestCLIReporting:
     """Test reporting commands."""
     
-    def test_list_command(self):
+    @pytest.fixture(autouse=True)
+    def setup_data(self, cli_runner):
+        cli_runner(["init", "Report Project"])
+        cli_runner(["add", "Sys A"])
+        cli_runner(["update", "Sys A", "--comp", "80"])
+    
+    def test_list_command(self, cli_runner, capsys):
         """Test 'list' command shows all systems."""
-        pass
+        cli_runner(["list"])
+        captured = capsys.readouterr()
+        assert "Sys A" in captured.out
+        assert "80%" in captured.out
     
-    def test_show_command(self):
+    def test_show_command(self, cli_runner, capsys):
         """Test 'show' command displays system details."""
-        pass
+        cli_runner(["show", "Sys A"])
+        captured = capsys.readouterr()
+        assert "\"completeness\": 80" in captured.out
     
-    def test_graph_command(self):
+    def test_graph_command(self, cli_runner, capsys):
         """Test 'graph' command generates Mermaid syntax."""
-        pass
-    
-    def test_coverage_command(self):
-        """Test 'coverage' command shows detailed breakdown."""
-        pass
+        cli_runner(["graph"])
+        captured = capsys.readouterr()
+        assert "graph TD" in captured.out
+        assert "Sys_A[\"Sys A\"]" in captured.out
