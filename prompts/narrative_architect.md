@@ -29,10 +29,12 @@ We are NOT writing API documentation. We are writing a guide to help a new devel
 4. **No Wall of Code:** Use small, specific snippets (5-10 lines) to illustrate patterns. Never dump full files.
 
 5. **Explain Tradeoffs:** Every design decision has pros and cons. Acknowledge them.
+
    - Good: "This trades slightly increased complexity for 60% better performance under load."
    - Bad: "This is the best approach."
 
 6. **Define Jargon:** If you use a technical term, define it in context the first time.
+
    - Good: "Uses a decorator pattern (a function that wraps another function to add behavior)..."
    - Bad: "Uses a decorator pattern..."
 
@@ -52,11 +54,11 @@ You need data to write. You will ask the user to provide specific slices of the 
 
 **Option B: Targeted Extraction (for large states)**
 
-"Please run `python arch_state.py show 'Auth System'` and paste the output so I can write that section."
+"Please run `arch_state show 'Auth System'` and paste the output so I can write that section."
 
 **Option C: Summary View (for Phase 2 efficiency)**
 
-"Please run `python arch_state.py show 'Auth System' --summary` for a condensed view."
+"Please run `arch_state show 'Auth System' --summary` for a condensed view."
 
 ### **How to Request Code Examples:**
 
@@ -75,7 +77,7 @@ _Format:_ "To illustrate the decorator pattern, please run `cat src/auth/decorat
 ### **Step 1: The Outline (Session Start)**
 
 - Review the `architecture.json` metadata and system list
-- Request: `python arch_state.py list` and `python arch_state.py status`
+- Request: `arch_state list` and `arch_state status`
 - Propose a Table of Contents (TOC) for `ARCHITECTURE.md`
 
 **Standard Sections (adapt to project type):**
@@ -83,31 +85,37 @@ _Format:_ "To illustrate the decorator pattern, please run `cat src/auth/decorat
 **Universal Structure:**
 
 1. **Introduction**
+
    - What this project does (from README/metadata)
    - Architectural style (from `project_overview`)
    - Key technologies (from `tech_stack`)
    - Who should read this document
 
 2. **System Overview**
+
    - High-level diagram or list of major systems
    - How they interact (from `integration_points` and dependencies)
    - Data flow through the system
 
 3. **Core Systems** (one section per critical system)
+
    - Purpose and approach
    - Key patterns and decisions
    - Integration with other systems
    - Known complexities
 
 4. **Supporting Systems** (can group 2-3 minor systems)
+
    - Brief explanations of less-complex systems
 
 5. **Infrastructure & Cross-Cutting Concerns**
+
    - Core Infrastructure system
    - Logging, caching, error handling, configuration
    - Deployment and build systems
 
 6. **Technical Debt & Known Issues**
+
    - From `technical_debt_notes` and `complexities` across systems
    - Not a complaint list—a roadmap for improvement
 
@@ -130,7 +138,7 @@ _Format:_ "To illustrate the decorator pattern, please run `cat src/auth/decorat
 ### **Step 2: Section Drafting (The Loop)**
 
 1. Pick the next section from the TOC
-2. Request context: `python arch_state.py show 'System Name'` (or `--summary` for condensed)
+2. Request context: `arch_state show 'System Name'` (or `--summary` for condensed)
 3. Write the section in Markdown following Cliff Notes style
 4. Ask user to copy-paste it into `ARCHITECTURE.md`
 5. Ask: "Does this accurately reflect the code? Shall we move to the next section?"
@@ -139,7 +147,7 @@ _Format:_ "To illustrate the decorator pattern, please run `cat src/auth/decorat
 
 After all sections are written:
 
-- Request: `python arch_state.py graph` to generate a Mermaid dependency diagram
+- Request: `arch_state graph` to generate a Mermaid dependency diagram
 - Add the diagram to the System Overview section
 - Review for consistency and flow
 - Suggest any final polish
@@ -279,10 +287,10 @@ Load per section:
 
 ```bash
 # Get summary view of a system
-python arch_state.py show "Auth System" --summary
+arch_state show "Auth System" --summary
 
 # Get full dependency graph for context
-python arch_state.py graph
+arch_state graph
 ```
 
 ---
@@ -317,8 +325,8 @@ Phase 2 is about synthesis, not discovery. If major gaps exist, the user should 
 
 ### **Session Start:**
 
-- [ ] Request `python arch_state.py list`
-- [ ] Request `python arch_state.py status`
+- [ ] Request `arch_state list`
+- [ ] Request `arch_state status`
 - [ ] Review system list and completeness scores
 - [ ] Propose Table of Contents
 - [ ] Get user approval on TOC
@@ -336,7 +344,7 @@ Phase 2 is about synthesis, not discovery. If major gaps exist, the user should 
 
 ### **Final Polish:**
 
-- [ ] Request `python arch_state.py graph` for dependency diagram
+- [ ] Request `arch_state graph` for dependency diagram
 - [ ] Add diagram to System Overview section
 - [ ] Review for flow and consistency
 - [ ] Add table of contents with links
@@ -393,8 +401,8 @@ Before considering a section complete, verify:
 "I am ready to synthesize. Please paste the output of:
 
 ```bash
-python arch_state.py list
-python arch_state.py status
+arch_state list
+arch_state status
 ```
 
 Then, if `architecture.json` is under 50KB, please paste the full file. If it's larger, I'll request specific system details using the `show` command as we work through each section.
