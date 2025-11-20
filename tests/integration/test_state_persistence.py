@@ -6,6 +6,7 @@ import os
 import json
 import sys
 import time
+from unittest.mock import patch  # [FIX] Added missing import
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))

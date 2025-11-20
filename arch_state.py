@@ -7,6 +7,7 @@ import shutil
 import datetime
 import fnmatch
 import re
+import copy  # [FIX] Added import
 from collections import defaultdict
 
 # --- CONFIGURATION ---
@@ -84,7 +85,10 @@ class StateManager:
     def init_project(self, name):
         if os.path.exists(STATE_FILE):
             if input(f"Overwrite {STATE_FILE}? (y/N): ").lower() != 'y': return
-        self.data = DEFAULT_STATE.copy()
+        
+        # [FIX] Use deepcopy to prevent polluting the global DEFAULT_STATE
+        self.data = copy.deepcopy(DEFAULT_STATE)
+        
         self.data["metadata"]["project_name"] = name
         self.data["metadata"]["project_type"] = self.detect_project_type()
         self.save_state()
@@ -197,7 +201,6 @@ class StateManager:
     def start_session(self):
         """Mark the beginning of a new session"""
         if not self.data: return
-        import copy
         self.session_start_state = copy.deepcopy(self.data)
         self.data["metadata"]["total_sessions"] += 1
         print(f"{Colors.BLUE}📍 Session {self.data['metadata']['total_sessions']} started{Colors.ENDC}")
