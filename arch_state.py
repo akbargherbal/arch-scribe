@@ -7,12 +7,13 @@ import shutil
 import datetime
 import fnmatch
 import re
-import copy  # [FIX] Added import
+import copy
 from collections import defaultdict
 
 # --- CONFIGURATION ---
 STATE_FILE = "architecture.json"
 BACKUP_FILE = "architecture.json.backup"
+SESSION_FILE = ".session_start"  # [FIX] Added for CLI persistence
 # Base ignores - will be augmented by .gitignore
 IGNORE_DIRS = {'.git', '__pycache__', 'node_modules', 'venv', '.env', 'dist', 'build', '.idea', '.vscode', 'target', 'bin', 'obj'}
 IGNORE_EXTS = {'.pyc', '.o', '.exe', '.so', '.dll', '.class', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot'}
@@ -86,7 +87,6 @@ class StateManager:
         if os.path.exists(STATE_FILE):
             if input(f"Overwrite {STATE_FILE}? (y/N): ").lower() != 'y': return
         
-        # [FIX] Use deepcopy to prevent polluting the global DEFAULT_STATE
         self.data = copy.deepcopy(DEFAULT_STATE)
         
         self.data["metadata"]["project_name"] = name
@@ -103,9 +103,11 @@ class StateManager:
             return "Flask Web Application"
         if os.path.exists("package.json"):
             with open("package.json") as f:
-                pkg = json.load(f)
-                if "express" in pkg.get("dependencies", {}):
-                    return "Node.js/Express Application"
+                try:
+                    pkg = json.load(f)
+                    if "express" in pkg.get("dependencies", {}):
+                        return "Node.js/Express Application"
+                except: pass
             return "Node.js Application"
         if os.path.exists("Cargo.toml"):
             return "Rust Project"
@@ -201,13 +203,31 @@ class StateManager:
     def start_session(self):
         """Mark the beginning of a new session"""
         if not self.data: return
+        
+        # [FIX] Save baseline to file for CLI persistence
+        with open(SESSION_FILE, 'w') as f:
+            json.dump(self.data, f)
+            
         self.session_start_state = copy.deepcopy(self.data)
         self.data["metadata"]["total_sessions"] += 1
+        self.save_state() # [FIX] Persist the counter increment
         print(f"{Colors.BLUE}📍 Session {self.data['metadata']['total_sessions']} started{Colors.ENDC}")
 
     def end_session(self):
         """Record what happened in this session"""
-        if not self.data or not self.session_start_state: return
+        if not self.data: return
+        
+        # [FIX] Try to load from file if not in memory (CLI usage)
+        if self.session_start_state is None and os.path.exists(SESSION_FILE):
+            try:
+                with open(SESSION_FILE, 'r') as f:
+                    self.session_start_state = json.load(f)
+            except json.JSONDecodeError:
+                pass
+        
+        if not self.session_start_state:
+            print(f"{Colors.WARNING}⚠️  No active session found (run session-start first).{Colors.ENDC}")
+            return
         
         old_systems = set(self.session_start_state.get("systems", {}).keys())
         new_systems = set(self.data["systems"].keys())
@@ -237,6 +257,11 @@ class StateManager:
         })
         
         self.save_state()
+        
+        # [FIX] Cleanup session file
+        if os.path.exists(SESSION_FILE):
+            os.remove(SESSION_FILE)
+            
         print(f"{Colors.GREEN}✅ Session {session_id} recorded:{Colors.ENDC}")
         print(f"   Systems added: {systems_added}")
         print(f"   Files mapped: {files_mapped}")
