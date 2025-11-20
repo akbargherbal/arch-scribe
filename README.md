@@ -1,129 +1,470 @@
-# Architecture Generator: Cliff Notes for Code
+# Architecture Documentation Generator
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+**Cliff Notes for Code** — Automatically generate comprehensive `ARCHITECTURE.md` documentation for any codebase using LLM-guided exploration and synthesis.
 
-This project provides tooling to enable the automated generation of narrative architectural documentation ("Cliff Notes for Code") for any codebase, using a multi-session, human-in-the-loop workflow with Large Language Models (LLMs).
+---
 
-## 1. The Problem
+## The Problem
 
-Understanding an unfamiliar open-source project is time-intensive. Cloning a repository often means facing hundreds of files—abstractions built on abstractions, frameworks partially understood, and architectural decisions left undocumented. The goal is not just to know _what_ the code does, but _how_ it works, _why_ it's structured that way, and _what patterns_ matter.
+Have you ever cloned an unfamiliar open-source project and faced hundreds of files—abstractions built on abstractions, frameworks you're only partially familiar with, architectural decisions that aren't documented anywhere? Complex codebases are like dense literary works: they need an interpretive layer to make them understandable.
 
-## 2. The Vision: "Cliff Notes for Code"
+Some books can't be read without Cliff Notes. The same is true for code.
 
-This system uses LLMs, guided by a human operator, to explore a codebase and generate a comprehensive `ARCHITECTURE.md` document. This isn't an API reference; it's a narrative guide that explains the software's soul.
+## The Solution
 
-The process is designed to be like an image rendering in progressively higher detail. Each session with the LLM sharpens the understanding, building a structured knowledge base that is finally synthesized into a clear, human-readable document.
+This project uses LLMs combined with structured multi-session workflows to create comprehensive architectural documentation for any codebase. Instead of overwhelming the LLM with thousands of files at once, it explores the project incrementally across multiple sessions, building a structured knowledge base that's then synthesized into clear, narrative documentation.
 
-## 3. How It Works: The Tripartite Architecture
+Think of it as **progressive rendering for documentation**—starting pixelated and gradually becoming crystal clear.
 
-The architecture is intentionally simple, powerful, and robust. It is a direct adaptation of the proven "Student Model" project, which separates state, evidence, and logic into three distinct components.
+---
 
-1.  **State Manager (`arch_state.py`)**: A pure Python CLI tool that manages the persistent knowledge base (`architecture.json`). It has **zero LLM integration**.
-2.  **Workspace Protocol (The Terminal)**: The human operator uses standard Unix tools (`cat`, `grep`, `tree`, `find`) to provide the LLM with concrete evidence from the codebase. This is the LLM's "eyes and ears."
-3.  **Persona Prompts (The LLM)**: A set of Markdown files (`prompts/*.md`) that are pasted into a web-based chat UI (like Claude or ChatGPT). These prompts define the LLM's role, objectives, and the "File Sharing Protocol" it must use to request evidence.
+## How It Works
 
-**The human is the integration layer**, copying text between the terminal and the chat window. This design avoids complex API integrations, authentication, and rate-limiting issues, making the tooling incredibly resilient.
+### Two-Phase Architecture
 
-## 4. The Two-Phase Workflow
+#### **Phase 1: Survey & Exploration** (Sessions 1-N)
 
-To manage context limits and ensure high-quality output, the process is divided into two distinct phases, each with its own LLM persona.
+The LLM acts as a **System Archaeologist**, exploring the codebase to discover and document architectural systems:
 
-### Phase 1: The Survey (System Archaeologist 🏛️)
+- Identifies major systems (Authentication, Data Layer, API, etc.)
+- Maps key files to each system
+- Records insights about design patterns and decisions
+- Notes complexities and technical debt
+- Tracks system dependencies and integration points
 
-- **Goal:** Explore the codebase and build a structured knowledge base (`architecture.json`).
-- **Persona:** The `System Archaeologist` is an explorer. It asks for file listings, searches for patterns, and reads specific files to map out the "systems" that make up the codebase.
-- **Output:** A detailed `architecture.json` file, not prose.
+**Output:** `architecture.json` — a structured knowledge base of architectural systems
 
-### Phase 2: The Synthesis (Narrative Architect ✍️)
+#### **Phase 2: Synthesis & Writing** (Sessions N+1 onwards)
 
-- **Goal:** Convert the structured knowledge base into a readable `ARCHITECTURE.md`.
-- **Persona:** The `Narrative Architect` is a writer. It consumes the `architecture.json` from Phase 1 and, section by section, writes the final document in the "Cliff Notes" style.
-- **Constraint:** This persona does not perform new exploration. It works with the facts gathered in Phase 1.
+The LLM becomes a **Narrative Architect**, writing `ARCHITECTURE.md` section by section:
 
-## 5. Components
+- Transforms structured notes into narrative prose
+- Explains the "why" behind design decisions
+- Uses a "Cliff Notes" style: clear, educational, narrative-driven
+- Focuses on understanding over completeness
 
-This repository contains two key components:
+**Output:** `ARCHITECTURE.md` — comprehensive architectural documentation
 
-1.  **`arch_state.py`**: The state management CLI.
-2.  **`prompts/`**: A directory containing the system prompts for the LLM personas.
-    - `system_archaeologist_final.md`: The prompt for Phase 1.
-    - `narrative_architect_final.md`: The prompt for Phase 2.
+### Why This Approach?
 
-## 6. Workflow: A Step-by-Step Guide
+- ✅ **Eliminates context overflow:** LLM explores incrementally, not all at once
+- ✅ **Prevents contradictions:** Phase 1 completes before Phase 2 begins
+- ✅ **Separates concerns:** Discovery vs. synthesis are different mental modes
+- ✅ **Session-friendly:** Natural checkpoint at phase transition
+- ✅ **Quality-focused:** Structured exploration produces better synthesis material
 
-Here is how to use the tooling to document a target repository.
+---
+
+## Getting Started
 
 ### Prerequisites
 
 - Python 3.8+
-- A target codebase you want to document.
-- Access to a powerful LLM via a web chat interface (e.g., Claude 3.5 Sonnet, GPT-4o).
+- Access to an LLM with file access capabilities (Claude, GPT-4, etc.)
+- Terminal/command-line access
 
-### Setup
+### Installation
 
-1.  Clone this repository.
-2.  Navigate to your target codebase in your terminal.
-3.  Run the initialization command from the `arch-generator` directory:
-    ```bash
-    python /path/to/arch_state.py init "My Project Name"
-    ```
-    This creates the `architecture.json` file in your target repo's root.
+1. **Clone this repository:**
 
-### Phase 1: The Survey
+```bash
+git clone https://github.com/yourusername/arch-doc-generator.git
+cd arch-doc-generator
+```
 
-1.  **Start a Session:** Open your LLM chat interface. Copy the entire contents of `prompts/system_archaeologist_final.md` and paste it as the first message.
-2.  **Begin the Loop:** The LLM will now guide you. It will ask you to run commands and paste the output.
-    - **LLM:** "I am ready to begin. Please run `python arch_state.py status` and `cat README.md`."
-    - **You:** Run the commands in your terminal, copy the output, and paste it back into the chat.
-    - **LLM:** "Thank you. I see this is a Django project. To understand the structure, please run `tree -L 2`."
-    - **You:** Run `tree -L 2`, copy, and paste.
-    - **LLM:** "I've identified an authentication system in `src/auth`. Please run these commands to update our map:"
-      ```bash
-      python arch_state.py add "Auth System"
-      python arch_state.py map "Auth System" src/auth/login.py src/auth/utils.py
-      python arch_state.py update "Auth System" --desc "Handles JWT login flow" --comp 20
-      ```
-    - **You:** Copy the command block and run it in your terminal.
-3.  **Continue:** Repeat this loop. The LLM will explore the codebase through you, building up the `architecture.json` file.
-4.  **End Phase 1:** The `status` command will tell you when you've met the completion criteria (e.g., >90% file coverage). At this point, run `python arch_state.py validate` to check for errors and proceed to Phase 2.
+2. **Make `arch_state` globally accessible:**
 
-### Phase 2: The Synthesis
+**Linux/macOS (Bash/Zsh):**
 
-1.  **Start a New Chat:** Open a fresh chat session with your LLM. This is crucial to switch personas.
-2.  **Load the Persona:** Copy the entire contents of `prompts/narrative_architect_final.md` and paste it.
-3.  **Provide Context:** The LLM will ask for the `architecture.json` data.
-    - **LLM:** "I am ready to synthesize. Please paste the output of `python arch_state.py list` and `python arch_state.py status`."
-    - **You:** Run the commands and paste the output.
-    - **LLM:** "Thank you. Now, please paste the full contents of `architecture.json`."
-    - **You:** Run `cat architecture.json`, copy, and paste.
-4.  **Write the Document:** The LLM will first propose a Table of Contents. Once you approve it, it will write the `ARCHITECTURE.md` document section by section, asking you to copy-paste each part into your local file.
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export PATH="/path/to/arch-doc-generator:$PATH"
 
-## 7. CLI Reference (`arch_state.py`)
+# Make executable
+chmod +x arch_state.py
+```
 
-The state manager provides a rich set of commands for inspecting and manipulating the `architecture.json` file.
+**Windows (PowerShell):**
 
-| Command                                 | Description                                               |
-| --------------------------------------- | --------------------------------------------------------- |
-| `init <name>`                           | Initializes a new `architecture.json` file.               |
-| `status`                                | Shows high-level project status and coverage metrics.     |
-| `list`                                  | Lists all identified systems and their completeness.      |
-| `show <name>`                           | Pretty-prints the JSON data for a specific system.        |
-| `validate`                              | Checks for data integrity issues before Phase 2.          |
-| `graph`                                 | Exports a Mermaid.js dependency graph of all systems.     |
-| `coverage`                              | Shows a detailed breakdown of file coverage by directory. |
-| `session-start`                         | Marks the beginning of an exploration session.            |
-| `session-end`                           | Records session activity and checks for completion.       |
-| `add <name>`                            | Adds a new, empty system to the state.                    |
-| `map <name> <files...>`                 | Maps one or more files to a system.                       |
-| `update <name> --desc/--comp/--clarity` | Updates a system's metadata.                              |
-| `insight <name> <text>`                 | Adds a key insight to a system.                           |
-| `dep <name> <target> <reason>`          | Creates a dependency link between systems.                |
+```powershell
+# Add to PowerShell profile
+$env:Path += ";C:\path\to\arch-doc-generator"
+```
 
-## 8. Design Philosophy
+3. **Verify installation:**
 
-- **Simplicity Over Power**: The core tooling is a single Python script with no external dependencies beyond the standard library. No API keys, no complex setup.
-- **Human as the Integration Layer**: The most flexible and powerful "API" is a human who can think, copy, and paste. This avoids brittle integrations and vendor lock-in.
-- **Protocol via Prompting**: The "File Sharing Protocol" is not code; it's a set of plain-text instructions in the system prompt that teaches the LLM how to ask for the data it needs.
-- **Evidence-Based Analysis**: The LLM is forbidden from hallucinating file contents. It must request explicit evidence for every claim it makes about the code.
+```bash
+arch_state --help
+```
+
+### Usage
+
+#### Step 1: Initialize Your Project
+
+Navigate to the codebase you want to document:
+
+```bash
+cd /path/to/your-project
+arch_state init "Your Project Name"
+```
+
+This creates `architecture.json` with project metadata.
+
+#### Step 2: Phase 1 — Exploration
+
+Start an exploration session with your LLM, using the **System Archaeologist** persona (see `system_archaeologist.md`).
+
+**Session workflow:**
+
+```bash
+# Start session tracking
+arch_state session-start
+
+# LLM explores the codebase and guides you to run commands like:
+arch_state add "Authentication System"
+arch_state map "Authentication System" src/auth/login.py src/auth/middleware.py
+arch_state insight "Authentication System" "Uses decorator pattern for route protection..."
+arch_state dep "Authentication System" "Core Infrastructure" "Uses Redis cache for tokens"
+
+# Check progress
+arch_state status
+arch_state coverage
+
+# End session
+arch_state session-end
+```
+
+**Continue sessions until Phase 1 stopping criteria met:**
+
+- **Gate A:** Coverage ≥ 90% of significant files
+- **Gate B:** 3 consecutive low-yield sessions (tracked automatically)
+
+#### Step 3: Validation
+
+Before moving to Phase 2:
+
+```bash
+arch_state validate
+```
+
+Fix any errors reported (missing descriptions, invalid dependencies, etc.).
+
+#### Step 4: Phase 2 — Synthesis
+
+Switch to the **Narrative Architect** persona (see `narrative_architect.md`).
+
+**Session workflow:**
+
+```bash
+# Get overview
+arch_state list
+arch_state status
+
+# View system details for writing
+arch_state show "Authentication System"
+arch_state show "Authentication System" --summary
+
+# Generate dependency diagram
+arch_state graph
+
+# Write ARCHITECTURE.md section by section using the system data
+```
+
+The LLM writes narrative prose based on the structured knowledge from Phase 1.
+
+---
+
+## CLI Reference
+
+### Session Management
+
+```bash
+arch_state session-start        # Begin session tracking
+arch_state session-end          # Record session metrics
+```
+
+### System Management
+
+```bash
+arch_state add "System Name"                    # Create new system
+arch_state map "System Name" file1.py file2.py  # Map files to system
+arch_state update "System Name" --desc "..." --comp 75  # Update metadata
+arch_state insight "System Name" "Insight text..."      # Add architectural insight
+arch_state dep "System Name" "Target" "Reason"          # Add dependency
+```
+
+### Inspection
+
+```bash
+arch_state status              # Overall project state & progress
+arch_state list                # List all systems with completeness
+arch_state show "System Name"  # View system details (full)
+arch_state show "System Name" --summary  # Condensed view
+arch_state coverage            # Directory-level coverage analysis
+arch_state graph               # Generate Mermaid dependency diagram
+arch_state validate            # Check for data quality issues
+```
+
+---
+
+## State File Structure
+
+The `architecture.json` file uses a system-centric schema:
+
+```json
+{
+  "schema_version": "2.2",
+  "metadata": {
+    "project_name": "Your Project",
+    "project_type": "Django Web Application",
+    "last_updated": "2025-11-20T10:30:00",
+    "phase": "survey",
+    "total_sessions": 5,
+    "scan_stats": {
+      "coverage_percentage": 87.5,
+      "coverage_quality": 92.3
+    }
+  },
+  "systems": {
+    "Authentication System": {
+      "description": "Handles user authentication using JWT tokens",
+      "completeness": 85,
+      "clarity": "high",
+      "key_files": ["src/auth/login.py", "src/auth/middleware.py"],
+      "insights": [
+        "Uses decorator pattern for declarative route protection",
+        "Token refresh integrates with Redis cache to reduce DB load"
+      ],
+      "complexities": [
+        "Middleware execution order isn't enforced programmatically"
+      ],
+      "dependencies": [
+        {
+          "system": "Core Infrastructure",
+          "reason": "Uses Redis for token caching"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## LLM Personas
+
+This project includes two specialized LLM personas:
+
+### Phase 1: System Archaeologist
+
+**Role:** Explore the codebase and build structured knowledge
+
+**Key behaviors:**
+
+- Breadth-first discovery (identify all systems before deep-diving)
+- Evidence-based analysis (never guesses file contents)
+- Structured note-taking (insights follow "[WHAT] using [HOW], which [WHY]" template)
+- Session discipline (always runs `session-start` and `session-end`)
+
+📄 Full persona: `system_archaeologist.md`
+
+### Phase 2: Narrative Architect
+
+**Role:** Synthesize structured knowledge into narrative documentation
+
+**Key behaviors:**
+
+- "Cliff Notes" writing style (explain WHY, not just WHAT)
+- Narrative flow (systems as characters in a story)
+- Plain language (define jargon, avoid walls of code)
+- Progressive disclosure (high-level → detailed)
+
+📄 Full persona: `narrative_architect.md`
+
+---
+
+## Design Philosophy
+
+### System-Centric Thinking
+
+Documentation is organized around **systems** (cohesive groups of 2-10 files providing a major capability), not files or directories.
+
+**Good system names:**
+
+- ✅ Authentication System
+- ✅ Data Persistence Layer
+- ✅ Background Task Queue
+
+**Bad system names:**
+
+- ❌ Backend / Frontend (too broad)
+- ❌ JWT Token Generation (too narrow—this is a component)
+- ❌ Controllers / Models (architectural layers, not capabilities)
+
+### Note Quality Standards
+
+Every insight must follow the template: **[WHAT] using [HOW], which [WHY/IMPACT]**
+
+**Good example:**
+
+> "Implements token refresh using Redis cache with sliding window TTL, which reduces database load during high-traffic periods by 60%"
+
+**Bad example:**
+
+> "Handles authentication stuff"
+
+### Stopping Criteria: Two-Gate Algorithm
+
+Phase 1 ends when **either** condition is met:
+
+- **Gate A:** Coverage ≥ 90% of significant files
+- **Gate B:** 3 consecutive low-yield sessions (<1 new system, <3 new files each)
+
+This prevents both premature completion and diminishing returns.
+
+---
+
+## Project Origin
+
+This project started from a personal frustration: understanding complex open-source codebases I didn't write. Some works of literature can't be read without Cliff Notes—not because readers are lazy, but because the layers of abstraction are too dense to parse on first reading. Code is the same way.
+
+The breakthrough was recognizing that this couldn't be a single-session task. By splitting exploration (Phase 1) from synthesis (Phase 2), and using structured state management (`architecture.json`) as the handoff mechanism, we can build comprehensive documentation incrementally without overwhelming LLM context windows.
+
+This is an **educational tool**—designed to make complex codebases learnable in a fraction of the time it would take to read them file by file.
+
+---
+
+## Advanced Usage
+
+### Coverage Analysis
+
+The `coverage` command shows directory-level mapping statistics:
+
+```bash
+arch_state coverage
+```
+
+**Output:**
+
+```
+=== 📊 COVERAGE BY DIRECTORY ===
+✅ src/auth                [██████████] 100% (8/8)
+⚠️  src/api                [██████░░░░]  60% (12/20)
+❌ src/background          [██░░░░░░░░]  20% (2/10)
+
+=== 📄 TOP UNMAPPED FILES ===
+  1. src/background/celery_config.py     (15.2 KB)
+  2. src/api/serializers.py              (12.8 KB)
+```
+
+Use this to identify exploration gaps.
+
+### Dependency Visualization
+
+Generate a Mermaid diagram of system dependencies:
+
+```bash
+arch_state graph
+```
+
+**Output:**
+
+```mermaid
+graph TD
+  Auth_System["Authentication System"]
+  Core_Infrastructure["Core Infrastructure"]
+  Data_Layer["Data Layer"]
+
+  Auth_System -->|Uses Redis for tokens| Core_Infrastructure
+  Auth_System -->|Stores user credentials| Data_Layer
+```
+
+Paste this into `ARCHITECTURE.md` for visual system relationships.
+
+### Session History
+
+View exploration trajectory:
+
+```bash
+arch_state status
+```
+
+Shows:
+
+- Total sessions run
+- Systems identified per session
+- Files mapped per session
+- Insights added per session
+- Gate A/B status
+
+---
+
+## Contributing
+
+Contributions welcome! This is an experimental project focused on LLM-guided documentation workflows.
+
+**Areas of interest:**
+
+- Improved heuristics for system discovery
+- Project type detection and templates
+- Note quality validation
+- Phase transition optimization
+
+**To contribute:**
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with clear commit messages
+4. Submit a pull request
+
+---
+
+## License
+
+MIT License
+
+Copyright (c) 2025
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Acknowledgments
+
+- Inspired by the challenge of understanding complex open-source projects
+- Built on experience with 30+ session multi-turn LLM workflows
+- Architecture adapted from proven `student.py` state management pattern
+- Special thanks to the concept of "Cliff Notes for code"—documentation should educate, not just enumerate
+
+---
+
+## Roadmap
+
+- [ ] Automated project type detection improvements
+- [ ] Template-based Phase 2 section generation
+- [ ] Git integration for tracking documentation drift
+- [ ] Web UI for `architecture.json` visualization
+- [ ] Export formats (Markdown, HTML, PDF)
+- [ ] Integration with documentation hosting platforms
+
+---
+
+**Questions? Issues? Feedback?**
+
+Open an issue on GitHub or start a discussion. This is an experimental educational project—collaboration and ideas are welcome!
