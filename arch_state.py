@@ -405,8 +405,7 @@ class StateManager:
         )
         print(f"{Colors.GREEN}✅ Linked {name} -> {target}{Colors.ENDC}")
         self.save_state()
-
-    # --- VALIDATION ---
+    #jjj
     def validate_schema(self):
         """Check for data quality issues"""
         if not self.data: return []
@@ -422,6 +421,24 @@ class StateManager:
                 errors.append(f"{name}: No key_files listed")
             if not sys.get("insights"):
                 errors.append(f"{name}: No insights recorded")
+            
+            # NEW: Check insight depth vs. completeness
+            insight_count = len(sys.get("insights", []))
+            completeness = sys.get("completeness", 0)
+            
+            # Rule 1: 50%+ complete requires 3+ insights
+            if completeness >= 50 and insight_count < 3:
+                errors.append(
+                    f"{name}: {completeness}% complete but only {insight_count} insights "
+                    f"(need 3+ for 50%+ completeness)"
+                )
+            
+            # Rule 2: 80%+ complete requires 5+ insights
+            if completeness >= 80 and insight_count < 5:
+                errors.append(
+                    f"{name}: {completeness}% complete but only {insight_count} insights "
+                    f"(need 5+ for 80%+ completeness)"
+                )
         
         # 2. Check dependency references
         for name, sys in systems.items():
@@ -443,7 +460,7 @@ class StateManager:
             errors.append(f"Found {len(core_orphans)} unmapped significant files (sample: {list(core_orphans)[:5]})")
         
         return errors
-
+    
     # --- REPORTING ---
     def print_status(self):
         self.update_stats()
