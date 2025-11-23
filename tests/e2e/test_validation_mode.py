@@ -35,7 +35,7 @@ class TestValidationMode:
         mgr.add_system("GoodSys")
         mgr.update_system("GoodSys", desc="Valid description")
         mgr.map_files("GoodSys", ["file.py"])
-        mgr.add_insight("GoodSys", "Valid insight")
+        mgr.add_insight("GoodSys", "Valid insight", force=True)
         
         # Mock scan_files to avoid orphan errors since we didn't create real files
         with patch.object(mgr, 'scan_files', return_value=(0, 0, set())):

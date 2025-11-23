@@ -41,7 +41,10 @@ class TestSessionLifecycle:
         # Make changes
         mgr.add_system("NewSys")
         mgr.map_files("NewSys", ["a.py", "b.py"])
-        mgr.add_insight("NewSys", "Insight 1")
+        # NEW (will pass - quality insight):
+        good_insight = "Implements OAuth using JWT tokens with Redis session storage, which enables horizontal scaling"
+
+        mgr.add_insight("NewSys", "Insight 1", good_insight)
         
         mgr.end_session()
         

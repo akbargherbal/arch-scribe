@@ -21,7 +21,7 @@ class TestPhase2DataConsumption:
         m.init_project("Phase2 Test")
         m.add_system("Auth")
         m.update_system("Auth", desc="Handles login", comp=100)
-        m.add_insight("Auth", "Uses OAuth")
+        m.add_insight("Auth", "Uses OAuth", force=True)
         m.add_system("DB")
         m.add_dependency("Auth", "DB", "Stores users")
         return m

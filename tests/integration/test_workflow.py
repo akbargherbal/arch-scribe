@@ -32,7 +32,8 @@ class TestSystemCreationWorkflow:
         mgr.update_system("Auth", desc="Handles user login", comp=20, clarity="high")
         
         # 4. Add Insight
-        mgr.add_insight("Auth", "Uses JWT tokens")
+        good_insight = "Implements OAuth using JWT tokens with Redis session storage, which enables horizontal scaling"
+        mgr.add_insight("Auth", "Uses JWT tokens", force=True)
         
         # Verify State
         sys_data = mgr.data["systems"]["Auth"]

@@ -23,7 +23,8 @@ class TestSaveLoadCycle:
         mgr1 = StateManager()
         mgr1.init_project("Persistence Test")
         mgr1.add_system("System A")
-        mgr1.add_insight("System A", "Insight 1")
+        good_insight = "Implements OAuth using JWT tokens with Redis session storage, which enables horizontal scaling"
+        mgr1.add_insight("System A", "Insight 1", good_insight)
         # Save is automatic in add_system/add_insight
         
         # 2. Load new instance
