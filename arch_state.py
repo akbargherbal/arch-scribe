@@ -164,12 +164,27 @@ class StateManager:
         return total, sig_total, sig_paths
 
     def calculate_coverage_quality(self, sig_paths, mapped):
-        """Penalize test/doc files to get real architectural coverage"""
-        core_mapped = [f for f in mapped if not any(x in f.lower() for x in ['test', 'doc', 'example', 'spec', '__pycache__'])]
-        core_sig = [f for f in sig_paths if not any(x in f.lower() for x in ['test', 'doc', 'example', 'spec', '__pycache__'])]
+        """Coverage quality: what % of significant files are mapped?
         
-        if not core_sig: return 0.0
-        return round(len(core_mapped) / len(core_sig) * 100, 1)
+        Args:
+            sig_paths (set): Set of significant file paths from scan
+            mapped (set): Set of files mapped to systems
+        
+        Returns:
+            float: Percentage (0.0-100.0) of significant files that are mapped
+        
+        Notes:
+            - Uses set intersection to ensure consistency
+            - Always returns ≤100%
+            - Does not filter test/doc files (simpler, more reliable)
+        """
+        if not sig_paths:
+            return 0.0
+        
+        # Only count files that exist in BOTH sets
+        mapped_sig = sig_paths.intersection(mapped)
+        return round(len(mapped_sig) / len(sig_paths) * 100, 1)
+
 
     def update_stats(self):
         if not self.data: return
