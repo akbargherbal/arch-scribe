@@ -515,58 +515,66 @@ class StateManager:
         return errors
     
     def compute_clarity(self, sys):
-            """Auto-compute clarity from objective rubric
-            
-            Clarity indicates how well a system is understood based on
-            exploration depth. This is computed, not manually set.
-            
-            HIGH CLARITY:
-            - 5+ insights recorded
-            - 70%+ completeness
-            - Has dependencies (integrated into architecture)
-            
-            MEDIUM CLARITY:
-            - 3-4 insights recorded
-            - 40-69% completeness
-            - May or may not have dependencies
-            
-            LOW CLARITY:
-            - 0-2 insights recorded
-            - <40% completeness
-            - Minimal exploration
-            
-            Args:
-                sys (dict): System data dictionary containing insights,
-                        completeness, and dependencies
-            
-            Returns:
-                str: "high", "medium", or "low"
-            
-            Example:
-                >>> sys = {
-                ...     "insights": ["insight1", "insight2", "insight3", "insight4", "insight5"],
-                ...     "completeness": 75,
-                ...     "dependencies": [{"system": "Auth", "reason": "..."}]
-                ... }
-                >>> compute_clarity(sys)
-                'high'
-            """
-            insight_count = len(sys.get("insights", []))
-            completeness = sys.get("completeness", 0)
-            has_deps = len(sys.get("dependencies", [])) > 0
-            
-            # High clarity: Deep understanding with integration
-            if insight_count >= 5 and completeness >= 70 and has_deps:
-                return "high"
-            
-            # Medium clarity: Partial understanding
-            if insight_count >= 3 and completeness >= 40:
-                return "medium"
-            
-            # Low clarity: Initial exploration or minimal understanding
-            return "low"
+        """Auto-compute clarity from objective rubric
+        
+        Clarity indicates how well a system is understood based on
+        exploration depth. This is computed, not manually set.
+        
+        HIGH CLARITY:
+        - 5+ insights recorded
+        - 70%+ completeness (base, excluding clarity bonus)
+        - Has dependencies (integrated into architecture)
+        
+        MEDIUM CLARITY:
+        - 3-4 insights recorded
+        - 40-69% completeness (base, excluding clarity bonus)
+        - May or may not have dependencies
+        
+        LOW CLARITY:
+        - 0-2 insights recorded
+        - <40% completeness (base, excluding clarity bonus)
+        - Minimal exploration
+        
+        Args:
+            sys (dict): System data dictionary containing insights,
+                    completeness, and dependencies
+        
+        Returns:
+            str: "high", "medium", or "low"
+        
+        Example:
+            >>> sys = {
+            ...     "insights": ["insight1", "insight2", "insight3", "insight4", "insight5"],
+            ...     "key_files": [...],  # 10 files
+            ...     "dependencies": [{"system": "Auth", "reason": "..."}]
+            ... }
+            >>> compute_clarity(sys)
+            'high'
+        """
+        insight_count = len(sys.get("insights", []))
+        has_deps = len(sys.get("dependencies", [])) > 0
+        
+        # Calculate BASE completeness (without clarity bonus) for clarity threshold check
+        # This breaks the circular dependency: clarity → completeness → clarity
+        file_count = len(sys.get("key_files", []))
+        file_score = min(file_count / 10.0, 1.0) * 40
+        insight_score = min(insight_count / 5.0, 1.0) * 35
+        dep_score = 15 if has_deps else 0
+        base_completeness = int(file_score + insight_score + dep_score)
+        
+        # High clarity: Deep understanding with integration
+        # Needs: 5+ insights AND 70%+ base comp AND dependencies
+        if insight_count >= 5 and base_completeness >= 70 and has_deps:
+            return "high"
+        
+        # Medium clarity: Partial understanding
+        # Needs: 3-4 insights AND 40-69% base comp
+        if insight_count >= 3 and base_completeness >= 40:
+            return "medium"
+        
+        # Low clarity: Initial exploration or minimal understanding
+        return "low"
 
-    
     def compute_completeness(self, sys):
         """Calculate completeness from objective metrics
         
