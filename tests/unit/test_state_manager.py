@@ -5,7 +5,11 @@ import pytest
 import os
 import json
 import sys
+import tempfile
+import unittest
 from unittest.mock import patch, mock_open
+
+
 
 # Add project root to path to import arch_state
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -290,3 +294,231 @@ class TestSystemOperations:
         assert len(deps) == 1
         assert deps[0]["system"] == "Backend"
         assert deps[0]["reason"] == "API calls"
+
+
+
+
+
+
+
+class TestClarityComputation(unittest.TestCase):
+    """Tests for auto-computed clarity levels"""
+    
+    def test_compute_clarity_low_minimal_insights(self):
+        """Low clarity: 0-2 insights, <40% completeness"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+                
+                sys = mgr.data["systems"]["Test System"]
+                
+                # Set low completeness
+                mgr.update_system("Test System", comp=30)
+                
+                # Add only 2 insights
+                mgr.add_insight("Test System", "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces database load", force=True)
+                mgr.add_insight("Test System", "Provides role-based access control using decorator pattern, which simplifies authorization checks", force=True)
+                
+                # Verify clarity is low
+                sys = mgr.data["systems"]["Test System"]
+                self.assertEqual(sys["clarity"], "low")
+                self.assertEqual(len(sys["insights"]), 2)
+                self.assertEqual(sys["completeness"], 30)
+            finally:
+                os.chdir(orig_dir)
+    
+    def test_compute_clarity_medium_partial_understanding(self):
+        """Medium clarity: 3-4 insights, 40-69% completeness"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+                
+                # Set medium completeness
+                mgr.update_system("Test System", comp=55)
+                
+                # Add 3 insights
+                mgr.add_insight("Test System", "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces database load", force=True)
+                mgr.add_insight("Test System", "Provides role-based access control using decorator pattern, which simplifies authorization checks", force=True)
+                mgr.add_insight("Test System", "Handles session management using sliding window expiration, which improves security without frequent re-authentication", force=True)
+                
+                # Verify clarity is medium
+                sys = mgr.data["systems"]["Test System"]
+                self.assertEqual(sys["clarity"], "medium")
+                self.assertEqual(len(sys["insights"]), 3)
+                self.assertGreaterEqual(sys["completeness"], 40)
+                self.assertLess(sys["completeness"], 70)
+            finally:
+                os.chdir(orig_dir)
+    
+    def test_compute_clarity_high_deep_understanding(self):
+        """High clarity: 5+ insights, 70%+ completeness, with dependencies"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Auth System")
+                mgr.add_system("Database")
+                
+                # Set high completeness
+                mgr.update_system("Auth System", comp=80)
+                
+                # Add 5 insights
+                insights = [
+                    "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces database load",
+                    "Provides role-based access control using decorator pattern, which simplifies authorization checks",
+                    "Handles session management using sliding window expiration, which improves security without frequent re-authentication",
+                    "Manages password hashing using bcrypt with adaptive work factor, which provides future-proof security",
+                    "Integrates with OAuth providers using PKCE flow, which enables secure third-party authentication"
+                ]
+                for insight in insights:
+                    mgr.add_insight("Auth System", insight, force=True)
+                
+                # Add dependency (required for high clarity)
+                mgr.add_dependency("Auth System", "Database", "Stores user credentials and session tokens")
+                
+                # Verify clarity is high
+                sys = mgr.data["systems"]["Auth System"]
+                self.assertEqual(sys["clarity"], "high")
+                self.assertEqual(len(sys["insights"]), 5)
+                self.assertGreaterEqual(sys["completeness"], 70)
+                self.assertGreater(len(sys["dependencies"]), 0)
+            finally:
+                os.chdir(orig_dir)
+    
+    def test_compute_clarity_high_requires_dependencies(self):
+        """High clarity requires dependencies even with 5+ insights and 70%+ completeness"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+                
+                # Set high completeness
+                mgr.update_system("Test System", comp=80)
+                
+                # Add 5 insights
+                insights = [
+                    "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces database load",
+                    "Provides role-based access control using decorator pattern, which simplifies authorization checks",
+                    "Handles session management using sliding window expiration, which improves security",
+                    "Manages password hashing using bcrypt with adaptive work factor, which provides security",
+                    "Integrates with OAuth providers using PKCE flow, which enables third-party authentication"
+                ]
+                for insight in insights:
+                    mgr.add_insight("Test System", insight, force=True)
+                
+                # NO dependencies added
+                
+                # Verify clarity is medium (not high) due to missing dependencies
+                sys = mgr.data["systems"]["Test System"]
+                self.assertEqual(sys["clarity"], "medium")  # Not high without deps
+                self.assertEqual(len(sys["dependencies"]), 0)
+            finally:
+                os.chdir(orig_dir)
+    
+    def test_clarity_recomputed_after_map_files(self):
+        """Verify clarity is recomputed after mapping files"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                
+                # Create dummy files
+                with open("file1.py", "w") as f:
+                    f.write("# " + "x" * 2000)  # >1KB
+                with open("file2.py", "w") as f:
+                    f.write("# " + "x" * 2000)
+                
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+                
+                # Initial clarity should be low
+                sys = mgr.data["systems"]["Test System"]
+                self.assertEqual(sys["clarity"], "low")
+                
+                # Map files (doesn't change clarity directly, but method should update it)
+                mgr.map_files("Test System", ["file1.py", "file2.py"])
+                
+                # Verify clarity field exists and is computed
+                sys = mgr.data["systems"]["Test System"]
+                self.assertIn("clarity", sys)
+                self.assertIn(sys["clarity"], ["low", "medium", "high"])
+            finally:
+                os.chdir(orig_dir)
+    
+    def test_clarity_recomputed_after_add_insight(self):
+        """Verify clarity is recomputed after adding insights"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+                
+                # Set medium completeness
+                mgr.update_system("Test System", comp=50)
+                
+                # Initial clarity: low (0 insights)
+                sys = mgr.data["systems"]["Test System"]
+                self.assertEqual(sys["clarity"], "low")
+                
+                # Add 3 insights to reach medium clarity
+                mgr.add_insight("Test System", "Implements authentication using JWT tokens with Redis cache, which reduces DB load", force=True)
+                mgr.add_insight("Test System", "Provides role-based access control using decorators, which simplifies checks", force=True)
+                mgr.add_insight("Test System", "Handles session management using sliding expiration, which improves security", force=True)
+                
+                # Verify clarity updated to medium
+                sys = mgr.data["systems"]["Test System"]
+                self.assertEqual(sys["clarity"], "medium")
+            finally:
+                os.chdir(orig_dir)
+    
+    def test_clarity_recomputed_after_add_dependency(self):
+        """Verify clarity is recomputed after adding dependencies"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Auth System")
+                mgr.add_system("Database")
+                
+                # Set high completeness and add 5 insights
+                mgr.update_system("Auth System", comp=75)
+                insights = [
+                    "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces load",
+                    "Provides role-based access control using decorator pattern, which simplifies authorization",
+                    "Handles session management using sliding window expiration, which improves security",
+                    "Manages password hashing using bcrypt with adaptive work factor, which provides security",
+                    "Integrates with OAuth providers using PKCE flow, which enables third-party authentication"
+                ]
+                for insight in insights:
+                    mgr.add_insight("Auth System", insight, force=True)
+                
+                # Before dependency: should be medium
+                sys = mgr.data["systems"]["Auth System"]
+                self.assertEqual(sys["clarity"], "medium")
+                
+                # Add dependency
+                mgr.add_dependency("Auth System", "Database", "Stores user data")
+                
+                # After dependency: should be high
+                sys = mgr.data["systems"]["Auth System"]
+                self.assertEqual(sys["clarity"], "high")
+            finally:
+                os.chdir(orig_dir)

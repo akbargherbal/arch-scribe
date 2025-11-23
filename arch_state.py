@@ -300,34 +300,65 @@ class StateManager:
         print(f"{Colors.GREEN}✅ Added system: {name}{Colors.ENDC}")
         self.save_state()
 
-    def update_system(self, name, desc=None, comp=None, clarity=None):
-        if name not in self.data["systems"]:
-            print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
-            return
-        
-        sys = self.data["systems"][name]
-        
-        if desc:
-            # Prevent newlines in descriptions (shell safety)
-            if "\n" in desc:
-                print(f"{Colors.FAIL}❌ Description cannot contain newlines. Use single-line descriptions.{Colors.ENDC}")
-                return
-            sys["description"] = desc
+    def update_system(self, name, desc=None, comp=None):
+            """Update system metadata
             
-        if comp is not None: sys["completeness"] = int(comp)
-        if clarity: sys["clarity"] = clarity
-        print(f"{Colors.GREEN}✅ Updated metadata for: {name}{Colors.ENDC}")
-        self.save_state()
+            Args:
+                name (str): System name
+                desc (str, optional): New description
+                comp (int, optional): New completeness percentage (0-100)
+            
+            Note:
+                Clarity is now auto-computed based on insights, completeness,
+                and dependencies. The --clarity parameter has been removed.
+            """
+            if name not in self.data["systems"]:
+                print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
+                return
+            
+            sys = self.data["systems"][name]
+            
+            if desc:
+                # Prevent newlines in descriptions (shell safety)
+                if "\n" in desc:
+                    print(f"{Colors.FAIL}❌ Description cannot contain newlines. Use single-line descriptions.{Colors.ENDC}")
+                    return
+                sys["description"] = desc
+                
+            if comp is not None: 
+                sys["completeness"] = int(comp)
+            
+            # Auto-compute clarity after any update
+            sys["clarity"] = self.compute_clarity(sys)
+            
+            print(f"{Colors.GREEN}✅ Updated metadata for: {name}{Colors.ENDC}")
+            self.save_state()
+
 
     def map_files(self, name, files):
-        if name not in self.data["systems"]:
-            print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
-            return
-        
-        self.data["systems"][name]["key_files"].extend(files)
-        self.data["systems"][name]["key_files"] = list(set(self.data["systems"][name]["key_files"]))
-        print(f"{Colors.GREEN}✅ Mapped {len(files)} files to: {name}{Colors.ENDC}")
-        self.update_stats()
+            """Map files to a system
+            
+            Args:
+                name (str): System name
+                files (list): List of file paths to map
+            
+            Note:
+                Automatically recomputes clarity after mapping files,
+                as file count affects completeness and thus clarity.
+            """
+            if name not in self.data["systems"]:
+                print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
+                return
+            
+            sys = self.data["systems"][name]
+            sys["key_files"].extend(files)
+            sys["key_files"] = list(set(sys["key_files"]))  # Remove duplicates
+            
+            # Auto-recompute clarity after mapping files
+            sys["clarity"] = self.compute_clarity(sys)
+            
+            print(f"{Colors.GREEN}✅ Mapped {len(files)} files to: {name}{Colors.ENDC}")
+            self.update_stats()
 
     def similar_text(self, a, b, threshold=0.8):
         """Simple word overlap check for duplicate detection"""
@@ -337,75 +368,94 @@ class StateManager:
         overlap = len(words_a & words_b) / max(len(words_a), len(words_b))
         return overlap > threshold
 
-
     def add_insight(self, name, text, force=False):
-        """Add insight to a system with quality validation
-        
-        Args:
-            name (str): System name
-            text (str): Insight text
-            force (bool): Skip validation prompts (for testing/automation)
-        
-        Returns:
-            None
-        
-        Note:
-            Quality validation can be overridden interactively.
-            Use force=True in tests to bypass prompts.
-        """
-        if name not in self.data["systems"]: 
-            return
-        
-        # Validate quality (unless forced)
-        if not force:
-            errors = self.validate_insight_quality(text)
-            if errors:
-                print(f"{Colors.WARNING}⚠️  Insight quality issues:{Colors.ENDC}")
-                for e in errors:
-                    print(f"   • {e}")
-                
-                print(f"\n{Colors.BLUE}Quality template: [WHAT] using [HOW], which [WHY/IMPACT]{Colors.ENDC}")
-                print(f"{Colors.BLUE}Example: 'Implements token refresh using Redis cache, which reduces DB load'{Colors.ENDC}")
-                
-                response = input(f"\n{Colors.WARNING}Add anyway? (y/N): {Colors.ENDC}")
-                if response.lower() != 'y':
-                    print(f"{Colors.FAIL}❌ Insight rejected. Please rewrite.{Colors.ENDC}")
-                    return
-                else:
-                    print(f"{Colors.WARNING}⚠️  Added with quality issues (consider revising later){Colors.ENDC}")
-        
-        # Check for duplicates (existing logic)
-        existing = self.data["systems"][name]["insights"]
-        if any(self.similar_text(text, e) for e in existing):
-            print(f"{Colors.WARNING}⚠️  Similar insight already exists. Skipping.{Colors.ENDC}")
-            return
-        
-        existing.append(text)
-        print(f"{Colors.GREEN}✅ Added insight to: {name}{Colors.ENDC}")
-        self.save_state()
-
-
-
-
-    def add_dependency(self, name, target, reason):
-        if name not in self.data["systems"]:
-            print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
-            return
-        
-        # Check if target exists
-        if target not in self.data["systems"]:
-            print(f"{Colors.WARNING}⚠️  Target system '{target}' doesn't exist yet.{Colors.ENDC}")
-            if input("Create it now? (y/N): ").lower() == 'y':
-                self.add_system(target)
-            else:
+            """Add insight to a system with quality validation
+            
+            Args:
+                name (str): System name
+                text (str): Insight text
+                force (bool): Skip validation prompts (for testing/automation)
+            
+            Returns:
+                None
+            
+            Note:
+                Quality validation can be overridden interactively.
+                Use force=True in tests to bypass prompts.
+                Automatically recomputes clarity after adding insight.
+            """
+            if name not in self.data["systems"]: 
                 return
-        
-        self.data["systems"][name]["dependencies"].append(
-            {"system": target, "reason": reason}
-        )
-        print(f"{Colors.GREEN}✅ Linked {name} -> {target}{Colors.ENDC}")
-        self.save_state()
-    #jjj
+            
+            # Validate quality (unless forced)
+            if not force:
+                errors = self.validate_insight_quality(text)
+                if errors:
+                    print(f"{Colors.WARNING}⚠️  Insight quality issues:{Colors.ENDC}")
+                    for e in errors:
+                        print(f"   • {e}")
+                    
+                    print(f"\n{Colors.BLUE}Quality template: [WHAT] using [HOW], which [WHY/IMPACT]{Colors.ENDC}")
+                    print(f"{Colors.BLUE}Example: 'Implements token refresh using Redis cache, which reduces DB load'{Colors.ENDC}")
+                    
+                    response = input(f"\n{Colors.WARNING}Add anyway? (y/N): {Colors.ENDC}")
+                    if response.lower() != 'y':
+                        print(f"{Colors.FAIL}❌ Insight rejected. Please rewrite.{Colors.ENDC}")
+                        return
+                    else:
+                        print(f"{Colors.WARNING}⚠️  Added with quality issues (consider revising later){Colors.ENDC}")
+            
+            # Check for duplicates (existing logic)
+            existing = self.data["systems"][name]["insights"]
+            if any(self.similar_text(text, e) for e in existing):
+                print(f"{Colors.WARNING}⚠️  Similar insight already exists. Skipping.{Colors.ENDC}")
+                return
+            
+            existing.append(text)
+            
+            # Auto-recompute clarity after adding insight
+            self.data["systems"][name]["clarity"] = self.compute_clarity(self.data["systems"][name])
+            
+            print(f"{Colors.GREEN}✅ Added insight to: {name}{Colors.ENDC}")
+            self.save_state()
+    
+    def add_dependency(self, name, target, reason):
+            """Add a dependency relationship between systems
+            
+            Args:
+                name (str): Source system name
+                target (str): Target system name (dependency)
+                reason (str): Why the dependency exists
+            
+            Note:
+                Automatically recomputes clarity after adding dependency,
+                as having dependencies affects clarity level (high clarity
+                requires dependencies to show integration).
+            """
+            if name not in self.data["systems"]:
+                print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
+                return
+            
+            # Check if target exists
+            if target not in self.data["systems"]:
+                print(f"{Colors.WARNING}⚠️  Target system '{target}' doesn't exist yet.{Colors.ENDC}")
+                if input("Create it now? (y/N): ").lower() == 'y':
+                    self.add_system(target)
+                else:
+                    return
+            
+            sys = self.data["systems"][name]
+            sys["dependencies"].append(
+                {"system": target, "reason": reason}
+            )
+            
+            # Auto-recompute clarity after adding dependency
+            sys["clarity"] = self.compute_clarity(sys)
+            
+            print(f"{Colors.GREEN}✅ Linked {name} -> {target}{Colors.ENDC}")
+            self.save_state()
+
+
     def validate_schema(self):
         """Check for data quality issues"""
         if not self.data: return []
@@ -461,6 +511,58 @@ class StateManager:
         
         return errors
     
+    def compute_clarity(self, sys):
+            """Auto-compute clarity from objective rubric
+            
+            Clarity indicates how well a system is understood based on
+            exploration depth. This is computed, not manually set.
+            
+            HIGH CLARITY:
+            - 5+ insights recorded
+            - 70%+ completeness
+            - Has dependencies (integrated into architecture)
+            
+            MEDIUM CLARITY:
+            - 3-4 insights recorded
+            - 40-69% completeness
+            - May or may not have dependencies
+            
+            LOW CLARITY:
+            - 0-2 insights recorded
+            - <40% completeness
+            - Minimal exploration
+            
+            Args:
+                sys (dict): System data dictionary containing insights,
+                        completeness, and dependencies
+            
+            Returns:
+                str: "high", "medium", or "low"
+            
+            Example:
+                >>> sys = {
+                ...     "insights": ["insight1", "insight2", "insight3", "insight4", "insight5"],
+                ...     "completeness": 75,
+                ...     "dependencies": [{"system": "Auth", "reason": "..."}]
+                ... }
+                >>> compute_clarity(sys)
+                'high'
+            """
+            insight_count = len(sys.get("insights", []))
+            completeness = sys.get("completeness", 0)
+            has_deps = len(sys.get("dependencies", [])) > 0
+            
+            # High clarity: Deep understanding with integration
+            if insight_count >= 5 and completeness >= 70 and has_deps:
+                return "high"
+            
+            # Medium clarity: Partial understanding
+            if insight_count >= 3 and completeness >= 40:
+                return "medium"
+            
+            # Low clarity: Initial exploration or minimal understanding
+            return "low"
+
     # --- REPORTING ---
     def print_status(self):
         self.update_stats()
@@ -643,8 +745,6 @@ class StateManager:
         return errors
 
 
-
-
 # --- CLI ---
 def main():
     parser = argparse.ArgumentParser()
@@ -670,7 +770,6 @@ def main():
     upd.add_argument("name")
     upd.add_argument("--desc")
     upd.add_argument("--comp", type=int)
-    upd.add_argument("--clarity")
 
     map_cmd = sub.add_parser("map")
     map_cmd.add_argument("name")
@@ -715,7 +814,7 @@ def main():
     elif args.cmd == "add":
         mgr.add_system(args.name)
     elif args.cmd == "update":
-        mgr.update_system(args.name, args.desc, args.comp, args.clarity)
+        mgr.update_system(args.name, args.desc, args.comp)
     elif args.cmd == "map":
         mgr.map_files(args.name, args.files)
     elif args.cmd == "insight":

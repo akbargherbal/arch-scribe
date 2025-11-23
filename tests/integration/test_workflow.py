@@ -24,25 +24,25 @@ class TestSystemCreationWorkflow:
         """Test add → map → update → insight sequence."""
         # 1. Add System
         mgr.add_system("Auth")
-        
+
         # 2. Map Files
         mgr.map_files("Auth", ["src/auth/login.py", "src/auth/logout.py"])
-        
-        # 3. Update Metadata
-        mgr.update_system("Auth", desc="Handles user login", comp=20, clarity="high")
-        
-        # 4. Add Insight
-        good_insight = "Implements OAuth using JWT tokens with Redis session storage, which enables horizontal scaling"
-        mgr.add_insight("Auth", "Uses JWT tokens", force=True)
-        
-        # Verify State
-        sys_data = mgr.data["systems"]["Auth"]
-        assert sys_data["description"] == "Handles user login"
-        assert sys_data["completeness"] == 20
-        assert sys_data["clarity"] == "high"
-        assert len(sys_data["key_files"]) == 2
-        assert "Uses JWT tokens" in sys_data["insights"]
-    
+
+        # 3. Update Metadata (REMOVED: clarity parameter - now auto-computed)
+        mgr.update_system("Auth", desc="Handles user login", comp=20)
+
+        # 4. Add Insight (with force=True to skip validation in tests)
+        mgr.add_insight("Auth", "Implements session management using JWT tokens with Redis backend, which reduces database queries by 50%", force=True)
+
+        # Verify system exists and has expected data
+        sys = mgr.data["systems"]["Auth"]
+        assert sys["description"] == "Handles user login"
+        assert sys["completeness"] == 20
+        assert len(sys["key_files"]) == 2
+        assert len(sys["insights"]) == 1
+        # Note: clarity is auto-computed, will be "low" (20% completeness, 1 insight)
+        assert sys["clarity"] == "low"
+
     def test_create_multiple_systems_with_dependencies(self, mgr):
         """Test creating interconnected systems."""
         mgr.add_system("Frontend")
@@ -72,25 +72,36 @@ class TestStateUpdates:
         m.init_project("Update Test")
         return m
 
+
     def test_multiple_updates_to_same_system(self, mgr):
-        """Test sequential updates to one system."""
+        """Test sequential updates to one system and verify auto-computed clarity."""
         mgr.add_system("Core")
-        
+
         # First update
         mgr.update_system("Core", desc="Initial description", comp=10)
         assert mgr.data["systems"]["Core"]["description"] == "Initial description"
         assert mgr.data["systems"]["Core"]["completeness"] == 10
-        
-        # Second update (overwrite)
+        assert mgr.data["systems"]["Core"]["clarity"] == "low"  # <40% completeness
+
+        # Second update (overwrite completeness to 50%)
         mgr.update_system("Core", desc="Updated description", comp=50)
         assert mgr.data["systems"]["Core"]["description"] == "Updated description"
         assert mgr.data["systems"]["Core"]["completeness"] == 50
+        assert mgr.data["systems"]["Core"]["clarity"] == "low"  # 50% but 0 insights = low
+
+        # Partial update - just triggers recomputation
+        mgr.update_system("Core")
+        assert mgr.data["systems"]["Core"]["description"] == "Updated description"  # Unchanged
+        assert mgr.data["systems"]["Core"]["clarity"] == "low"  # Still low (0 insights)
+
+        # Add insights to test clarity progression
+        mgr.add_insight("Core", "Implements core functionality using modular design, which enables extension", force=True)
+        mgr.add_insight("Core", "Provides event bus for component communication, which reduces coupling", force=True)
+        mgr.add_insight("Core", "Manages lifecycle hooks using observer pattern, which enables plugins", force=True)
         
-        # Partial update (only clarity)
-        mgr.update_system("Core", clarity="medium")
-        assert mgr.data["systems"]["Core"]["description"] == "Updated description" # Unchanged
+        # Now with 3 insights and 50% completeness, should be medium
         assert mgr.data["systems"]["Core"]["clarity"] == "medium"
-    
+
     def test_updates_across_multiple_sessions(self, mgr):
         """Test that changes persist across sessions."""
         # Session 1
