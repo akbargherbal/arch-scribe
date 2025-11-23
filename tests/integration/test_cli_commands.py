@@ -90,17 +90,16 @@ class TestCLISystemCommands:
             files = data["systems"]["Core"]["key_files"]
             assert "file1.py" in files
             assert "file2.py" in files
-    
     def test_update_command(self, cli_runner):
-        """Test 'update' command modifies system metadata."""
-        cli_runner(["add", "Core"])
-        cli_runner(["update", "Core", "--desc", "Core logic", "--comp", "50"])
-        
-        with open(STATE_FILE) as f:
-            data = json.load(f)
-            sys = data["systems"]["Core"]
-            assert sys["description"] == "Core logic"
-            assert sys["completeness"] == 50
+            """Test 'update' command modifies system metadata."""
+            cli_runner(["add", "Core"])
+            cli_runner(["update", "Core", "--desc", "Core logic"])
+            with open(STATE_FILE) as f:
+                data = json.load(f)
+                sys = data["systems"]["Core"]
+                assert sys["description"] == "Core logic"
+                # Completeness is now auto-computed (should be 0 with no files/insights)
+                assert sys["completeness"] == 0    
     
     def test_insight_command(self, cli_runner):
             """Test 'insight' command adds insight."""
@@ -131,20 +130,19 @@ class TestCLIReporting:
     def setup_data(self, cli_runner):
         cli_runner(["init", "Report Project"])
         cli_runner(["add", "Sys A"])
-        cli_runner(["update", "Sys A", "--comp", "80"])
     
     def test_list_command(self, cli_runner, capsys):
         """Test 'list' command shows all systems."""
         cli_runner(["list"])
         captured = capsys.readouterr()
         assert "Sys A" in captured.out
-        assert "80%" in captured.out
+        assert "0%" in captured.out
     
     def test_show_command(self, cli_runner, capsys):
         """Test 'show' command displays system details."""
         cli_runner(["show", "Sys A"])
         captured = capsys.readouterr()
-        assert "\"completeness\": 80" in captured.out
+        assert "\"completeness\": 0" in captured.out
     
     def test_graph_command(self, cli_runner, capsys):
         """Test 'graph' command generates Mermaid syntax."""

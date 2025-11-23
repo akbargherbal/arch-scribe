@@ -300,7 +300,6 @@ class StateManager:
         print(f"{Colors.GREEN}✅ Added system: {name}{Colors.ENDC}")
         self.save_state()
 
-
     def update_system(self, name, desc=None):
         """Update system metadata
         
@@ -309,9 +308,8 @@ class StateManager:
             desc (str, optional): New description
         
         Note:
-            Completeness and clarity are now auto-computed based on
-            insights, files, and dependencies. The --comp and --clarity
-            parameters have been removed.
+            Completeness and clarity are always auto-computed based on
+            files, insights, dependencies. No manual override allowed.
         """
         if name not in self.data["systems"]:
             print(f"{Colors.FAIL}❌ System '{name}' not found.{Colors.ENDC}")
@@ -326,13 +324,12 @@ class StateManager:
                 return
             sys["description"] = desc
         
-        # Auto-compute completeness and clarity
+        # Always auto-compute completeness and clarity
         sys["clarity"] = self.compute_clarity(sys)
         sys["completeness"] = self.compute_completeness(sys)
         
         print(f"{Colors.GREEN}✅ Updated metadata for: {name}{Colors.ENDC}")
         self.save_state()
-
 
     def map_files(self, name, files):
         """Map files to a system

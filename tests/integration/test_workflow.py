@@ -29,7 +29,7 @@ class TestSystemCreationWorkflow:
         mgr.map_files("Auth", ["src/auth/login.py", "src/auth/logout.py"])
 
         # 3. Update Metadata (REMOVED: clarity parameter - now auto-computed)
-        mgr.update_system("Auth", desc="Handles user login", comp=20)
+        mgr.update_system("Auth", desc="Handles user login")
 
         # 4. Add Insight (with force=True to skip validation in tests)
         mgr.add_insight("Auth", "Implements session management using JWT tokens with Redis backend, which reduces database queries by 50%", force=True)
@@ -37,7 +37,7 @@ class TestSystemCreationWorkflow:
         # Verify system exists and has expected data
         sys = mgr.data["systems"]["Auth"]
         assert sys["description"] == "Handles user login"
-        assert sys["completeness"] == 20
+        assert sys["completeness"] == 15
         assert len(sys["key_files"]) == 2
         assert len(sys["insights"]) == 1
         # Note: clarity is auto-computed, will be "low" (20% completeness, 1 insight)
