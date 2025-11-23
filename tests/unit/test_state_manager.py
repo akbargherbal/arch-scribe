@@ -522,3 +522,295 @@ class TestClarityComputation(unittest.TestCase):
                 self.assertEqual(sys["clarity"], "high")
             finally:
                 os.chdir(orig_dir)
+
+
+
+class TestCompletenessComputation(unittest.TestCase):
+    """Tests for auto-computed completeness scores"""
+
+    def test_compute_completeness_minimal_system(self):
+        """Minimal system: 0 files, 0 insights → 0%"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Minimal System")
+
+                sys = mgr.data["systems"]["Minimal System"]
+                
+                # Verify minimal completeness
+                self.assertEqual(sys["completeness"], 0)
+                self.assertEqual(len(sys["key_files"]), 0)
+                self.assertEqual(len(sys["insights"]), 0)
+                self.assertEqual(len(sys["dependencies"]), 0)
+            finally:
+                os.chdir(orig_dir)
+
+    def test_compute_completeness_formula_accuracy(self):
+        """Test formula: 5 files, 3 insights, 1 dep, medium clarity"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                
+                # Create dummy files
+                for i in range(5):
+                    with open(f"file{i}.py", "w") as f:
+                        f.write("# " + "x" * 2000)  # >1KB
+                
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+                mgr.add_system("Dependency")
+
+                # Map 5 files → 20 points (5/10 * 40)
+                mgr.map_files("Test System", [f"file{i}.py" for i in range(5)])
+
+                # Add 3 insights → 21 points (3/5 * 35)
+                insights = [
+                    "Implements authentication using JWT tokens with Redis cache, which reduces database load significantly",
+                    "Provides role-based access control using decorator pattern, which simplifies authorization checks",
+                    "Handles session management using sliding window expiration, which improves security"
+                ]
+                for insight in insights:
+                    mgr.add_insight("Test System", insight, force=True)
+
+                # Add dependency → 15 points
+                mgr.add_dependency("Test System", "Dependency", "Uses for data storage")
+
+                sys = mgr.data["systems"]["Test System"]
+                
+                # Expected: 20 (files) + 21 (insights) + 15 (deps) + 5 (medium clarity) = 61
+                # Medium clarity because: 3 insights + 61% comp (circular but converges)
+                expected = 20 + 21 + 15 + 5  # = 61
+                self.assertEqual(sys["completeness"], expected)
+                self.assertEqual(sys["clarity"], "medium")
+            finally:
+                os.chdir(orig_dir)
+
+    def test_compute_completeness_capped_at_100(self):
+        """Completeness should never exceed 100%"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                
+                # Create 20 dummy files (more than 10)
+                for i in range(20):
+                    with open(f"file{i}.py", "w") as f:
+                        f.write("# " + "x" * 2000)
+                
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Large System")
+                mgr.add_system("Dependency")
+
+                # Map 20 files → 40 points (capped at 10 files)
+                mgr.map_files("Large System", [f"file{i}.py" for i in range(20)])
+
+                # Add 10 insights → 35 points (capped at 5 insights)
+                for i in range(10):
+                    mgr.add_insight("Large System", 
+                                  f"Insight {i}: Implements feature using pattern which provides benefit for users and improves performance", 
+                                  force=True)
+
+                # Add dependency → 15 points
+                mgr.add_dependency("Large System", "Dependency", "Integration")
+
+                sys = mgr.data["systems"]["Large System"]
+                
+                # Should be capped at 100 (40 + 35 + 15 + 10 = 100)
+                self.assertLessEqual(sys["completeness"], 100)
+                self.assertEqual(sys["completeness"], 100)
+                self.assertEqual(sys["clarity"], "high")
+            finally:
+                os.chdir(orig_dir)
+
+    def test_completeness_recomputed_after_map_files(self):
+        """Verify completeness increases after mapping files"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                
+                # Create dummy files
+                for i in range(5):
+                    with open(f"file{i}.py", "w") as f:
+                        f.write("# " + "x" * 2000)
+                
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+
+                # Initial completeness should be 0
+                sys = mgr.data["systems"]["Test System"]
+                initial_comp = sys["completeness"]
+                self.assertEqual(initial_comp, 0)
+
+                # Map files
+                mgr.map_files("Test System", ["file0.py", "file1.py", "file2.py"])
+
+                # Verify completeness increased
+                sys = mgr.data["systems"]["Test System"]
+                self.assertGreater(sys["completeness"], initial_comp)
+                
+                # Expected: 3 files = 12 points (3/10 * 40)
+                self.assertEqual(sys["completeness"], 12)
+            finally:
+                os.chdir(orig_dir)
+
+    def test_completeness_recomputed_after_add_insight(self):
+        """Verify completeness increases after adding insights"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Test System")
+
+                # Initial completeness should be 0
+                initial_comp = mgr.data["systems"]["Test System"]["completeness"]
+                self.assertEqual(initial_comp, 0)
+
+                # Add insight
+                mgr.add_insight("Test System", 
+                              "Implements authentication using JWT tokens with Redis cache, which reduces database load",
+                              force=True)
+
+                # Verify completeness increased
+                sys = mgr.data["systems"]["Test System"]
+                self.assertGreater(sys["completeness"], initial_comp)
+                
+                # Expected: 1 insight = 7 points (1/5 * 35)
+                self.assertEqual(sys["completeness"], 7)
+            finally:
+                os.chdir(orig_dir)
+
+    def test_completeness_recomputed_after_add_dependency(self):
+        """Verify completeness increases after adding dependency"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("System A")
+                mgr.add_system("System B")
+
+                # Initial completeness should be 0
+                initial_comp = mgr.data["systems"]["System A"]["completeness"]
+                self.assertEqual(initial_comp, 0)
+
+                # Add dependency
+                mgr.add_dependency("System A", "System B", "Uses for storage")
+
+                # Verify completeness increased by 15 points
+                sys = mgr.data["systems"]["System A"]
+                self.assertEqual(sys["completeness"], 15)
+            finally:
+                os.chdir(orig_dir)
+
+    def test_completeness_progression_realistic_workflow(self):
+        """Test completeness progression through realistic workflow"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                
+                # Create files
+                for i in range(10):
+                    with open(f"file{i}.py", "w") as f:
+                        f.write("# " + "x" * 2000)
+                
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Auth System")
+                mgr.add_system("Database")
+
+                # Step 1: Map 3 files → ~12%
+                mgr.map_files("Auth System", ["file0.py", "file1.py", "file2.py"])
+                comp1 = mgr.data["systems"]["Auth System"]["completeness"]
+                self.assertEqual(comp1, 12)
+
+                # Step 2: Add 2 insights → ~26%
+                mgr.add_insight("Auth System", 
+                              "Implements JWT authentication with Redis-backed tokens, which reduces database load",
+                              force=True)
+                mgr.add_insight("Auth System",
+                              "Provides role-based access control using decorators, which simplifies authorization",
+                              force=True)
+                comp2 = mgr.data["systems"]["Auth System"]["completeness"]
+                self.assertEqual(comp2, 26)  # 12 + 14 (2/5 * 35)
+
+                # Step 3: Add dependency → ~41%
+                mgr.add_dependency("Auth System", "Database", "Stores credentials")
+                comp3 = mgr.data["systems"]["Auth System"]["completeness"]
+                self.assertEqual(comp3, 41)  # 26 + 15
+
+                # Step 4: Add 3 more insights (5 total) → ~61%
+                mgr.add_insight("Auth System",
+                              "Handles session management with sliding expiration, which improves security",
+                              force=True)
+                mgr.add_insight("Auth System",
+                              "Manages password hashing using bcrypt, which provides security",
+                              force=True)
+                mgr.add_insight("Auth System",
+                              "Integrates OAuth providers using PKCE, which enables third-party auth",
+                              force=True)
+                comp4 = mgr.data["systems"]["Auth System"]["completeness"]
+                # 12 (files) + 35 (5 insights) + 15 (deps) + 0 (still low clarity with only 60% comp)
+                # Wait, clarity needs 70%+ for high, so at 62% it's medium (+5)
+                self.assertEqual(comp4, 67)  # 12 + 35 + 15 + 5
+
+                # Verify clarity is medium (5+ insights but <70% comp)
+                sys = mgr.data["systems"]["Auth System"]
+                self.assertEqual(sys["clarity"], "medium")
+
+                # Step 5: Map 7 more files (10 total) → should reach high clarity
+                mgr.map_files("Auth System", [f"file{i}.py" for i in range(3, 10)])
+                comp5 = mgr.data["systems"]["Auth System"]["completeness"]
+                # 40 (10 files) + 35 (5 insights) + 15 (deps) + 10 (high clarity) = 100
+                self.assertEqual(comp5, 100)
+                self.assertEqual(sys["clarity"], "high")
+            finally:
+                os.chdir(orig_dir)
+
+    def test_edge_case_large_system(self):
+        """Test with very large system (20+ files, 10+ insights)"""
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = os.getcwd()
+            try:
+                os.chdir(tmp)
+                
+                # Create 25 files
+                for i in range(25):
+                    with open(f"file{i}.py", "w") as f:
+                        f.write("# " + "x" * 2000)
+                
+                mgr = StateManager()
+                mgr.init_project("TestProject")
+                mgr.add_system("Large System")
+                mgr.add_system("Dep")
+
+                # Map 25 files (should cap at 40 points)
+                mgr.map_files("Large System", [f"file{i}.py" for i in range(25)])
+
+                # Add 8 insights (should cap at 35 points)
+                for i in range(8):
+                    mgr.add_insight("Large System",
+                                  f"Feature {i} implements pattern using technique which provides benefit to users",
+                                  force=True)
+
+                # Add dependency
+                mgr.add_dependency("Large System", "Dep", "Integration")
+
+                sys = mgr.data["systems"]["Large System"]
+                
+                # Should reach 100: 40 + 35 + 15 + 10 = 100
+                self.assertEqual(sys["completeness"], 100)
+                self.assertEqual(sys["clarity"], "high")
+            finally:
+                os.chdir(orig_dir)
