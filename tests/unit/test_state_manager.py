@@ -176,23 +176,109 @@ class TestSystemOperations:
         assert "auth.py" in files
         assert "login.py" in files
         assert len(files) == 2
-    
-    def test_add_insight(self, initialized_mgr):
-        """Test adding insights to a system."""
-        initialized_mgr.add_system("Auth System")
-        initialized_mgr.add_insight("Auth System", "Uses JWT")
-        assert "Uses JWT" in initialized_mgr.data["systems"]["Auth System"]["insights"]
-    
-    def test_add_duplicate_insight_blocked(self, initialized_mgr, capsys):
-        """Test that similar insights are detected and blocked."""
-        initialized_mgr.add_system("Auth System")
-        initialized_mgr.add_insight("Auth System", "Uses JWT tokens for auth")
-        initialized_mgr.add_insight("Auth System", "uses jwt tokens for auth") # Case insensitive check
+
+    def test_validate_insight_quality_good_insight(self):
+        """Good insights should pass validation"""
+        mgr = StateManager()
         
-        captured = capsys.readouterr()
-        assert "Similar insight already exists" in captured.out
-        assert len(initialized_mgr.data["systems"]["Auth System"]["insights"]) == 1
-    
+        # Good insight: 15+ words, has action verb, has impact
+        good_insight = "Implements token refresh using Redis cache with sliding window TTL, which reduces database load by sixty percent and improves response times"
+        errors = mgr.validate_insight_quality(good_insight)
+        
+        assert errors == []
+
+    def test_validate_insight_quality_too_short(self):
+        """Short insights should fail validation"""
+        mgr = StateManager()
+        
+        errors = mgr.validate_insight_quality("Uses JWT")
+        assert len(errors) > 0
+        assert any("Too short" in e for e in errors)
+        
+        # Should report word count
+        assert "2 words" in errors[0]
+
+    def test_validate_insight_quality_missing_action(self):
+        """Insights without action verbs should fail"""
+        mgr = StateManager()
+        
+        # Long but no action verb
+        insight = "The system is complex and has many different features for handling requests from various client applications and services"
+        errors = mgr.validate_insight_quality(insight)
+        
+        assert any("WHAT" in e for e in errors)
+
+    def test_validate_insight_quality_missing_impact(self):
+        """Insights without impact statement should fail"""
+        mgr = StateManager()
+        
+        # Has action but no impact
+        insight = "Implements decorator pattern for route protection with middleware functions in the application stack"
+        errors = mgr.validate_insight_quality(insight)
+        
+        assert any("WHY/IMPACT" in e for e in errors)
+
+    def test_add_insight_with_force_bypasses_validation(self):
+        """Force flag should bypass validation for testing"""
+        mgr = StateManager()
+        mgr.data = {
+            "systems": {
+                "TestSys": {
+                    "insights": [],
+                    "key_files": []
+                }
+            },
+            "metadata": {"last_updated": ""}
+        }
+        
+        # Short insight with force=True should be added
+        mgr.add_insight("TestSys", "Short text", force=True)
+        assert len(mgr.data["systems"]["TestSys"]["insights"]) == 1
+
+    def test_add_insight(self):
+        """Test adding quality insight (UPDATE EXISTING TEST)"""
+        mgr = StateManager()
+        mgr.data = {
+            "systems": {
+                "TestSys": {
+                    "insights": [],
+                    "key_files": []
+                }
+            },
+            "metadata": {"last_updated": ""}
+        }
+        
+        # Use quality insight (15+ words, action, impact)
+        insight = "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces database load by caching session data and improves scalability"
+        mgr.add_insight("TestSys", insight, force=True)
+        
+        assert len(mgr.data["systems"]["TestSys"]["insights"]) == 1
+        assert mgr.data["systems"]["TestSys"]["insights"][0] == insight
+
+    def test_add_duplicate_insight_blocked(self):
+        """Duplicate detection should still work (UPDATE EXISTING TEST)"""
+        mgr = StateManager()
+        mgr.data = {
+            "systems": {
+                "TestSys": {
+                    "insights": [],
+                    "key_files": []
+                }
+            },
+            "metadata": {"last_updated": ""}
+        }
+        
+        insight = "Implements authentication using JWT tokens with Redis-backed refresh logic, which reduces database load by caching session data and improves scalability"
+        
+        # Add once
+        mgr.add_insight("TestSys", insight, force=True)
+        # Try to add duplicate
+        mgr.add_insight("TestSys", insight, force=True)
+        
+        # Should only exist once
+        assert len(mgr.data["systems"]["TestSys"]["insights"]) == 1
+
+
     def test_add_dependency(self, initialized_mgr):
         """Test adding dependency between systems."""
         initialized_mgr.add_system("Frontend")

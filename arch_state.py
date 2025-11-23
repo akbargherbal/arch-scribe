@@ -337,10 +337,44 @@ class StateManager:
         overlap = len(words_a & words_b) / max(len(words_a), len(words_b))
         return overlap > threshold
 
-    def add_insight(self, name, text):
-        if name not in self.data["systems"]: return
+
+    def add_insight(self, name, text, force=False):
+        """Add insight to a system with quality validation
         
-        # Check for duplicates
+        Args:
+            name (str): System name
+            text (str): Insight text
+            force (bool): Skip validation prompts (for testing/automation)
+        
+        Returns:
+            None
+        
+        Note:
+            Quality validation can be overridden interactively.
+            Use force=True in tests to bypass prompts.
+        """
+        if name not in self.data["systems"]: 
+            return
+        
+        # Validate quality (unless forced)
+        if not force:
+            errors = self.validate_insight_quality(text)
+            if errors:
+                print(f"{Colors.WARNING}⚠️  Insight quality issues:{Colors.ENDC}")
+                for e in errors:
+                    print(f"   • {e}")
+                
+                print(f"\n{Colors.BLUE}Quality template: [WHAT] using [HOW], which [WHY/IMPACT]{Colors.ENDC}")
+                print(f"{Colors.BLUE}Example: 'Implements token refresh using Redis cache, which reduces DB load'{Colors.ENDC}")
+                
+                response = input(f"\n{Colors.WARNING}Add anyway? (y/N): {Colors.ENDC}")
+                if response.lower() != 'y':
+                    print(f"{Colors.FAIL}❌ Insight rejected. Please rewrite.{Colors.ENDC}")
+                    return
+                else:
+                    print(f"{Colors.WARNING}⚠️  Added with quality issues (consider revising later){Colors.ENDC}")
+        
+        # Check for duplicates (existing logic)
         existing = self.data["systems"][name]["insights"]
         if any(self.similar_text(text, e) for e in existing):
             print(f"{Colors.WARNING}⚠️  Similar insight already exists. Skipping.{Colors.ENDC}")
@@ -349,6 +383,9 @@ class StateManager:
         existing.append(text)
         print(f"{Colors.GREEN}✅ Added insight to: {name}{Colors.ENDC}")
         self.save_state()
+
+
+
 
     def add_dependency(self, name, target, reason):
         if name not in self.data["systems"]:
@@ -536,6 +573,61 @@ class StateManager:
                 kb = size / 1024
                 print(f"  {i}. {f:<50} ({kb:.1f} KB)")
 
+
+    def validate_insight_quality(self, text):
+        """Check if insight meets quality standards
+        
+        Quality template: [WHAT] using [HOW], which [WHY/IMPACT]
+        
+        Args:
+            text (str): Insight text to validate
+        
+        Returns:
+            list: Error messages (empty list if valid)
+        
+        Example:
+            Good: "Implements token refresh using Redis cache with sliding 
+                window TTL, which reduces database load by 60%"
+            Bad:  "Uses JWT" (too short, missing structure)
+        """
+        errors = []
+        words = text.split()
+        
+        # 1. Minimum length check
+        if len(words) < 15:
+            errors.append(f"Too short ({len(words)} words, need 15+)")
+        
+        # 2. Structure: [WHAT] check (action verbs)
+        action_verbs = [
+            'uses', 'implements', 'provides', 'manages', 'handles', 
+            'enables', 'applies', 'leverages', 'integrates', 'wraps',
+            'stores', 'processes', 'validates', 'enforces', 'coordinates',
+            'orchestrates', 'maintains', 'transforms', 'monitors', 'controls'
+        ]
+        has_action = any(verb in text.lower() for verb in action_verbs)
+        if not has_action:
+            errors.append("Missing [WHAT] - no clear action verb found")
+
+        # 3. Structure: [WHY/IMPACT] check (consequence words)
+        impact_words = [
+            'which', 'enabling', 'allowing', 'reducing', 'improving',
+            'ensuring', 'preventing', 'to', 'so that', 'because',
+            'thereby', 'thus', 'resulting in', 'leading to', 'causing'
+        ]
+        # Use word boundaries to avoid substring matches (e.g., "to" in "decorator")
+        text_lower = text.lower()
+        has_impact = any(
+            re.search(r'\b' + re.escape(word) + r'\b', text_lower) 
+            for word in impact_words
+        )
+        if not has_impact:
+            errors.append("Missing [WHY/IMPACT] - no consequence or benefit stated")
+
+        return errors
+
+
+
+
 # --- CLI ---
 def main():
     parser = argparse.ArgumentParser()
@@ -610,7 +702,8 @@ def main():
     elif args.cmd == "map":
         mgr.map_files(args.name, args.files)
     elif args.cmd == "insight":
-        mgr.add_insight(args.name, args.text)
+        # force=False for CLI (interactive), force=True only in tests
+        mgr.add_insight(args.name, args.text, force=False)
     elif args.cmd == "dep":
         mgr.add_dependency(args.name, args.target, args.reason)
     else:

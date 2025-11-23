@@ -34,7 +34,7 @@ class TestMultiSessionWorkflow:
         # Session 3: Refinement
         mgr = StateManager() # Reload
         mgr.start_session()
-        mgr.add_insight("Core", "It works")
+        mgr.add_insight("Core", "It works", force=True)
         mgr.end_session()
         
         # Verify
