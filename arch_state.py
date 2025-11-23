@@ -9,6 +9,8 @@ import fnmatch
 import re
 import copy
 from collections import defaultdict
+from config.insight_quality import ACTION_VERBS, IMPACT_WORDS, MIN_WORD_COUNT
+
 
 # --- CONFIGURATION ---
 STATE_FILE = "architecture.json"
@@ -783,22 +785,13 @@ class StateManager:
             errors.append(f"Too short ({len(words)} words, need 15+)")
         
         # 2. Structure: [WHAT] check (action verbs)
-        action_verbs = [
-            'uses', 'implements', 'provides', 'manages', 'handles', 
-            'enables', 'applies', 'leverages', 'integrates', 'wraps',
-            'stores', 'processes', 'validates', 'enforces', 'coordinates',
-            'orchestrates', 'maintains', 'transforms', 'monitors', 'controls'
-        ]
+        action_verbs = ACTION_VERBS
         has_action = any(verb in text.lower() for verb in action_verbs)
         if not has_action:
             errors.append("Missing [WHAT] - no clear action verb found")
 
         # 3. Structure: [WHY/IMPACT] check (consequence words)
-        impact_words = [
-            'which', 'enabling', 'allowing', 'reducing', 'improving',
-            'ensuring', 'preventing', 'to', 'so that', 'because',
-            'thereby', 'thus', 'resulting in', 'leading to', 'causing'
-        ]
+        impact_words = IMPACT_WORDS
         # Use word boundaries to avoid substring matches (e.g., "to" in "decorator")
         text_lower = text.lower()
         has_impact = any(
