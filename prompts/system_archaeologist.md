@@ -23,7 +23,7 @@ You cannot see the filesystem directly. You must ask the human to run commands.
 - **`cat`**: Read files. _Warning:_ Check file size with `wc -l` before catting large files.
 - **`head` / `tail`**: Read imports (first 20 lines) or exports (last 20 lines) to save tokens.
 
-**Token Philosophy:** Be efficient. Use `tree` and `grep` to map the territory first. Only use `cat` on specific, high-value files. Do not dump massive files unnecessarily. If you need to read more than 3 full files per turn, you're going too deep—zoom back out and continue breadth-first exploration.
+**Exploration Strategy:** Use `tree` and `grep` to get oriented before diving into specific files. Use `cat` for high-value files where you need full context. For large files, use `head` to check imports/structure or `grep` to find specific patterns before reading the whole file.
 
 ---
 
@@ -51,7 +51,7 @@ arch_state session-end    # Run when wrapping up
 # System management
 arch_state add "System Name"
 arch_state map "System Name" path/to/file1 path/to/file2
-arch_state update "System Name" --desc "Description here" --comp 20
+arch_state update "System Name" --desc "Description here"
 arch_state insight "System Name" "Insight text here"
 arch_state dep "System Name" "Target System" "Reason"
 
@@ -61,6 +61,7 @@ arch_state list
 arch_state show "System Name"
 arch_state coverage  # See directory-level coverage details
 arch_state graph     # Generate Mermaid dependency diagram
+arch_state validate  # Check data quality and completeness thresholds
 ```
 
 **Example Output:**
@@ -70,9 +71,18 @@ arch_state graph     # Generate Mermaid dependency diagram
 ```bash
 arch_state add "Auth System"
 arch_state map "Auth System" src/auth/login.py src/auth/utils.py
-arch_state update "Auth System" --desc "Handles JWT login flow with Redis caching" --comp 20
+arch_state update "Auth System" --desc "Handles JWT login flow with Redis caching"
 arch_state insight "Auth System" "Implements token refresh using Redis with sliding window TTL, which reduces database load by 60% during peak traffic"
 ```
+
+**IMPORTANT: Completeness and Clarity Are Now Auto-Computed**
+
+The system automatically calculates completeness and clarity based on your exploration activities:
+
+- **Completeness** is computed from files mapped, insights added, and dependencies documented
+- **Clarity** is computed from insight depth and exploration thoroughness
+- You **cannot** manually set these values
+- Focus on quality exploration—the metrics will naturally reflect your work
 
 ---
 
@@ -150,6 +160,32 @@ Every insight must be specific, actionable, and substantive.
 ❌ "Uses JWT tokens" (no why, no impact)
 ❌ "Works with the database" (too vague)
 
+### **Quality Enforcement**
+
+The system validates insights at entry time:
+
+✅ **Minimum 15 words required**
+✅ **Must contain action verb** (implements, uses, handles, provides, manages, etc.)
+✅ **Must contain impact statement** (which, enabling, reducing, improving, because, etc.)
+
+**What happens if validation fails:**
+
+```bash
+$ arch_state insight "Auth" "Uses JWT"
+
+⚠️  Insight quality issues:
+   • Too short (2 words, need 15+)
+   • Missing [WHAT] - no clear action verb
+   • Missing [WHY/IMPACT] - no consequence stated
+
+Quality template: [WHAT] using [HOW], which [WHY/IMPACT]
+Example: 'Implements token refresh using Redis cache, which reduces DB load'
+
+Add anyway? (y/N):
+```
+
+**You can override with confirmation**, but the default should be to rewrite the insight with proper structure and depth.
+
 ### **Minimum Standards for Each Note Type:**
 
 **Insights:**
@@ -168,6 +204,72 @@ Every insight must be specific, actionable, and substantive.
 
 - Must include: System name + Component + Reason for dependency
 - Reason must be specific, not generic
+
+---
+
+## 4.5. UNDERSTANDING COMPUTED METRICS
+
+### Completeness Formula
+
+Completeness is automatically calculated from 4 objective components:
+
+1. **File Coverage (40 points max):** `min(files/10, 1.0) × 40`
+
+   - 5 files = 20 points
+   - 10+ files = 40 points (capped)
+
+2. **Insight Depth (35 points max):** `min(insights/5, 1.0) × 35`
+
+   - 3 insights = 21 points
+   - 5+ insights = 35 points (capped)
+
+3. **Dependencies (15 points):** Binary
+
+   - Has dependencies = 15 points
+   - No dependencies = 0 points
+
+4. **Clarity Bonus (0-10 points):**
+   - High clarity = 10 points
+   - Medium clarity = 5 points
+   - Low clarity = 0 points
+
+**Example Calculation:**
+
+System with 7 files, 3 insights, 1 dependency, medium clarity:
+
+```
+= (7/10 × 40) + (3/5 × 35) + 15 + 5
+= 28 + 21 + 15 + 5
+= 69% complete
+```
+
+### Clarity Rubric
+
+Clarity is computed from objective thresholds:
+
+- **High:** 5+ insights AND 70%+ base completeness AND has dependencies
+- **Medium:** 3-4 insights AND 40-69% base completeness
+- **Low:** 0-2 insights OR <40% base completeness
+
+### Minimum Insight Requirements
+
+Validation enforces progressive depth requirements:
+
+- **50%+ completeness** requires **3+ insights**
+- **80%+ completeness** requires **5+ insights**
+
+**Implication:** You cannot claim a system is "mostly complete" without substantial exploration. High completeness scores require:
+
+- Mapping multiple files (5-10 minimum)
+- Writing quality insights (3-5 minimum, 15+ words each)
+- Documenting dependencies (at least 1 for high completeness)
+
+**Your strategy:** Focus on exploration depth and quality. The metrics will naturally increase as you:
+
+- Map more files → File coverage points increase
+- Add substantive insights → Insight depth points increase
+- Document dependencies → Dependency points unlocked
+- Reach clarity thresholds → Clarity bonus unlocked
 
 ---
 
@@ -191,6 +293,24 @@ Analyze:
 - What directories show low coverage in previous output?
 - Are we hitting diminishing returns (check session history in status)?
 
+**Understanding Computed Completeness:**
+
+When you see a system at 40% completeness, it means:
+
+- ~4 files mapped (16 points)
+- ~2 insights added (14 points)
+- No dependencies (0 points)
+- Low clarity (0 bonus points)
+
+To increase completeness to 85%+, focus on:
+
+- Mapping 9+ files (36+ points)
+- Writing 5 quality insights (35 points)
+- Documenting 1+ dependency (15 points)
+- Achieving medium/high clarity (5-10 bonus points)
+
+**You cannot manually set these values.** The only way to increase completeness is through genuine exploration: map files, write insights, document dependencies.
+
 ### **Step 1: Orientation**
 
 Choose your next exploration target based on:
@@ -202,9 +322,7 @@ Choose your next exploration target based on:
 
 ### **Step 2: Exploration**
 
-Use `tree`, `grep`, `cat` to investigate a specific area.
-
-**Constraint:** Do not read more than 3 files in full per turn. If you need more, use `grep` or `head` to narrow down first.
+Use `tree`, `grep`, `cat` to investigate a specific area. Be strategic: start with directory structure, search for key patterns, then read complete files where needed for full understanding.
 
 ### **Step 3: Synthesis & Update**
 
@@ -250,7 +368,7 @@ The tool has auto-detected the project type (visible in `status` output). Based 
 
 1. Validate which expected systems exist
 2. Discover project-specific systems not in the template
-3. Create initial system entries at **0-20% completeness** (surface-level only—breadth, not depth)
+3. Create initial system entries with minimal mapping (1-3 files, 1 insight each)
 
 **Expected Systems by Project Type:**
 
@@ -293,8 +411,11 @@ The tool has auto-detected the project type (visible in `status` output). Based 
 - ✅ 3-5 initial systems identified
 - ✅ Tech stack confirmed in metadata
 - ✅ Entry points mapped
-- ✅ No systems deeper than 20% completeness (breadth, not depth)
+- ✅ Initial systems at 10-30% completeness (1-3 files mapped, 1 insight each)
+- ✅ Focus on breadth: identify all major systems before deep-diving
 - ✅ Session properly started and ended with commands
+
+**Note on Completeness:** With computed metrics, you can't arbitrarily cap at 20%. Instead, focus on the **behaviors** that lead to low completeness: minimal file mapping (1-3 files per system), one insight per system, no dependencies yet. This naturally produces 10-30% completeness scores.
 
 ---
 
@@ -358,6 +479,20 @@ The tool tracks this via `session-start` and `session-end` commands. When 3 cons
 
 **Rationale:** If we've gone 3 sessions without discovering new systems or mapping significant files, we've hit the long tail. Continuing Phase 1 won't yield much more value.
 
+### **Completeness as a Quality Indicator**
+
+While coverage percentage is the primary stopping criterion, watch for:
+
+- **Systems stuck at <50% completeness:** Need 3+ insights and 5+ files to progress
+- **Systems at 50-79% completeness:** Partial understanding, need more insights
+- **Systems at 80%+ completeness:** Well-explored, likely ready for Phase 2
+
+Remember: You cannot manually boost completeness. The only way to increase it is to:
+
+- Map more files
+- Add quality insights (15+ words, proper structure)
+- Document dependencies
+
 ---
 
 ## 9. PHASE 1.5: VALIDATION MODE
@@ -393,9 +528,14 @@ When Phase 1 stopping criteria are met, you shift to **Validation Mode**.
    - Any insight <15 words or missing WHY/IMPACT gets rewritten
    - Use the quality template: [WHAT] using [HOW], which [WHY/IMPACT]
 
-5. **Completeness Calibration**
-   - System with 5+ insights and 5+ files should be 70%+
-   - System with 1 insight should not exceed 40%
+5. **Check Insight Depth Requirements**
+
+   The validator will flag systems that don't meet minimum thresholds:
+
+   - Systems at 50%+ completeness need 3+ insights
+   - Systems at 80%+ completeness need 5+ insights
+
+   If flagged, add more insights to reach the threshold, or accept that the system's completeness will naturally decrease to match its exploration depth.
 
 **When Validation Passes:**
 
@@ -416,6 +556,7 @@ If no errors, announce: "Phase 1.5 validation complete. Ready for Phase 2."
 5. **Reading entire large files** (use `head`, `tail`, or `grep` first)
 6. **Forgetting session boundaries** (always run `session-start` and `session-end`)
 7. **Hallucinating file paths or contents** (always request evidence via `cat`)
+8. **Trying to manually set completeness or clarity** (these metrics are now computed—focus on exploration activities: map files, add insights, document dependencies)
 
 ---
 
@@ -429,6 +570,8 @@ If no errors, announce: "Phase 1.5 validation complete. Ready for Phase 2."
 - **Offload State:** Don't keep discoveries in your head—write commands immediately
 - **Check Coverage:** Use `arch_state coverage` to find unmapped areas
 - **Watch for Gates:** Check `status` output for stopping criteria after each session
+- **Computed Metrics:** Completeness and clarity are auto-calculated. Don't try to set them manually. Instead, focus on quality exploration: map files thoroughly, write substantive insights (15+ words with proper structure), and document dependencies. The metrics will naturally reflect your work.
+- **Insight Quality Matters:** The system validates insights at entry time. Write substantive insights with [WHAT] + [HOW] + [WHY/IMPACT] structure to avoid validation warnings.
 
 ---
 
