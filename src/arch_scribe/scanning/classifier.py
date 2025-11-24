@@ -22,14 +22,17 @@ class FileClassifier:
         '.sh', '.bash', '.zsh', '.pl', '.pm', '.r', '.m', '.mm'
     }
     
+    # Treated as significant if < max_config_size_kb (default 50KB)
     CONFIG_EXTENSIONS = {
         '.json', '.yaml', '.yml', '.toml', '.ini', '.xml', '.env',
-        '.conf', '.config', '.properties', '.dockerfile'
+        '.conf', '.config', '.properties', '.dockerfile',
+        '.md', '.rst', '.txt'  # Documentation is significant!
     }
     
+    # Never significant
     DATA_EXTENSIONS = {
         '.csv', '.tsv', '.parquet', '.db', '.sqlite', '.sql',
-        '.txt', '.md', '.rst', '.log', '.lock'
+        '.log', '.lock'
     }
     
     def __init__(self):
@@ -37,7 +40,7 @@ class FileClassifier:
             set(CLASSIFICATION_CONFIG.get("data_directories", []))
         )
         self.max_config_size_kb = CLASSIFICATION_CONFIG.get("max_config_size_kb", 50)
-        self.size_samples = []  # Collect sizes for statistical analysis
+        self.size_samples = []
         self._outlier_threshold = None
     
     def is_in_data_directory(self, file_path: str) -> bool:
@@ -61,12 +64,9 @@ class FileClassifier:
         return 'unknown'
     
     def calculate_outlier_threshold(self) -> float:
-        """
-        Calculate IQR-based outlier threshold.
-        Returns: size in bytes above which files are statistical outliers
-        """
+        """Calculate IQR-based outlier threshold."""
         if len(self.size_samples) < 10:
-            return float('inf')  # Not enough data
+            return float('inf')
         
         sorted_sizes = sorted(self.size_samples)
         n = len(sorted_sizes)
@@ -75,7 +75,6 @@ class FileClassifier:
         q3 = sorted_sizes[3 * n // 4]
         iqr = q3 - q1
         
-        # Outliers are >3 IQR above Q3 (conservative)
         return q3 + (3 * iqr)
 
     def is_size_outlier(self, size_bytes: int) -> bool:
@@ -85,9 +84,7 @@ class FileClassifier:
         return size_bytes > self._outlier_threshold
     
     def is_significant(self, file_path: str, size_bytes: int) -> bool:
-        """
-        Determines if a file is significant based on heuristics.
-        """
+        """Determines if a file is significant based on heuristics."""
         # Phase 1: Size check (baseline filter)
         if size_bytes / 1024 < SIGNIFICANT_SIZE_KB:
             return False
@@ -100,12 +97,10 @@ class FileClassifier:
         file_type = self.classify_by_extension(file_path)
         
         # Phase 4: Statistical outlier check
-        # If it's a massive outlier, be skeptical unless it's definitely code
         if self.is_size_outlier(size_bytes):
             if file_type != 'code':
                 return False
         
-        # Standard logic
         if file_type == 'code':
             return True
         
