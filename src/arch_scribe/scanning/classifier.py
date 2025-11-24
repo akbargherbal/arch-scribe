@@ -1,4 +1,5 @@
 import os
+import statistics
 from ..core.constants import SIGNIFICANT_SIZE_KB, CLASSIFICATION_CONFIG
 
 class FileClassifier:
@@ -36,6 +37,8 @@ class FileClassifier:
             set(CLASSIFICATION_CONFIG.get("data_directories", []))
         )
         self.max_config_size_kb = CLASSIFICATION_CONFIG.get("max_config_size_kb", 50)
+        self.size_samples = []  # Collect sizes for statistical analysis
+        self._outlier_threshold = None
     
     def is_in_data_directory(self, file_path: str) -> bool:
         """Check if file is in a known data directory"""
@@ -44,7 +47,6 @@ class FileClassifier:
     
     def classify_by_extension(self, file_path: str) -> str:
         """Returns: 'code', 'config', 'data', or 'unknown'"""
-        # Handle Dockerfile special case (no extension)
         if os.path.basename(file_path).lower() == 'dockerfile':
             return 'config'
             
@@ -58,6 +60,30 @@ class FileClassifier:
             return 'data'
         return 'unknown'
     
+    def calculate_outlier_threshold(self) -> float:
+        """
+        Calculate IQR-based outlier threshold.
+        Returns: size in bytes above which files are statistical outliers
+        """
+        if len(self.size_samples) < 10:
+            return float('inf')  # Not enough data
+        
+        sorted_sizes = sorted(self.size_samples)
+        n = len(sorted_sizes)
+        
+        q1 = sorted_sizes[n // 4]
+        q3 = sorted_sizes[3 * n // 4]
+        iqr = q3 - q1
+        
+        # Outliers are >3 IQR above Q3 (conservative)
+        return q3 + (3 * iqr)
+
+    def is_size_outlier(self, size_bytes: int) -> bool:
+        """Check if file size is a statistical outlier"""
+        if self._outlier_threshold is None:
+            self._outlier_threshold = self.calculate_outlier_threshold()
+        return size_bytes > self._outlier_threshold
+    
     def is_significant(self, file_path: str, size_bytes: int) -> bool:
         """
         Determines if a file is significant based on heuristics.
@@ -70,20 +96,23 @@ class FileClassifier:
         if self.is_in_data_directory(file_path):
             return False
         
-        # NEW: Phase 3: Extension-based rules
+        # Phase 3: Extension-based rules
         file_type = self.classify_by_extension(file_path)
         
-        # Code files: always significant if >1KB (already checked above)
+        # Phase 4: Statistical outlier check
+        # If it's a massive outlier, be skeptical unless it's definitely code
+        if self.is_size_outlier(size_bytes):
+            if file_type != 'code':
+                return False
+        
+        # Standard logic
         if file_type == 'code':
             return True
         
-        # Data files: never significant (unless we want to track schemas, but usually noise)
         if file_type == 'data':
             return False
         
-        # Config files: only if reasonably sized
         if file_type == 'config':
             return size_bytes / 1024 < self.max_config_size_kb
         
-        # Unknown: use size heuristic (stay conservative)
         return True

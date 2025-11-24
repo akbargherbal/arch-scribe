@@ -67,3 +67,32 @@ def test_monkeytype_word_lists():
     
     # Small JSON config in root
     assert classifier.is_significant("package.json", 2048) is True
+
+def test_statistical_outlier_detection():
+    classifier = FileClassifier()
+    
+    # Simulate typical codebase: most files 1-10KB
+    # 100 files of 1KB-10KB
+    classifier.size_samples = [1024 * (i % 10 + 1) for i in range(100)]
+    
+    # Add one 5MB outlier
+    huge_size = 5 * 1024 * 1024
+    classifier.size_samples.append(huge_size)
+    
+    # Force calculation
+    threshold = classifier.calculate_outlier_threshold()
+    
+    # Threshold should be well below 5MB
+    assert threshold < huge_size
+    
+    # Check outlier logic
+    classifier._outlier_threshold = threshold
+    assert classifier.is_size_outlier(huge_size) is True
+    assert classifier.is_size_outlier(5 * 1024) is False
+    
+    # Test impact on significance
+    # Huge code file -> Still significant
+    assert classifier.is_significant("huge_logic.py", huge_size) is True
+    
+    # Huge unknown file -> Not significant (assumed data dump)
+    assert classifier.is_significant("dump.unknown", huge_size) is False
