@@ -3,31 +3,28 @@ import os
 import sys
 import shutil
 import datetime
-import fnmatch
 import re
 import copy
 from collections import defaultdict
 
-# Relative imports within the package
+# Core imports
 from .constants import (
-    STATE_FILE,
-    BACKUP_FILE,
-    SESSION_FILE,
-    IGNORE_DIRS,
-    IGNORE_EXTS,
-    SIGNIFICANT_SIZE_KB,
-    Colors,
-    DEFAULT_STATE,
+    STATE_FILE, BACKUP_FILE, SESSION_FILE, Colors, DEFAULT_STATE
 )
-
-# Import config from sibling package
+# Config imports
 from ..config.insight_quality import ACTION_VERBS, IMPACT_WORDS, MIN_WORD_COUNT
+
+# New modular imports
+from ..scanning.file_scanner import FileScanner
+from ..metrics.coverage import calculate_coverage_quality
+from ..metrics.clarity import compute_clarity
+from ..metrics.completeness import compute_completeness
 
 
 class StateManager:
     def __init__(self):
         self.data = self.load_state()
-        self.ignore_patterns = self.load_gitignore()
+        self.scanner = FileScanner()
         self.session_start_state = None
 
     def load_state(self):
@@ -99,66 +96,12 @@ class StateManager:
         return "Unknown"
 
     # --- METRICS & SCANNING ---
-    def load_gitignore(self):
-        """Parses .gitignore to augment IGNORE_DIRS"""
-        patterns = set()
-        if os.path.exists(".gitignore"):
-            try:
-                with open(".gitignore", "r") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#"):
-                            if line.endswith("/"):
-                                IGNORE_DIRS.add(line.rstrip("/"))
-                            patterns.add(line)
-            except Exception:
-                pass
-        return patterns
-
-    def is_ignored(self, path, name):
-        if name in IGNORE_DIRS:
-            return True
-        if os.path.splitext(name)[1] in IGNORE_EXTS:
-            return True
-        for pattern in self.ignore_patterns:
-            if fnmatch.fnmatch(name, pattern):
-                return True
-        return False
-
-    def scan_files(self):
-        total, sig_total, sig_paths = 0, 0, set()
-        for root, dirs, files in os.walk("."):
-            dirs[:] = [d for d in dirs if not self.is_ignored(os.path.join(root, d), d)]
-
-            for file in files:
-                if self.is_ignored(os.path.join(root, file), file):
-                    continue
-
-                path = os.path.join(root, file)
-                rel = os.path.relpath(path, ".").replace("\\", "/")
-                if rel.startswith("./"):
-                    rel = rel[2:]
-
-                total += 1
-                try:
-                    if os.path.getsize(path) / 1024 >= SIGNIFICANT_SIZE_KB:
-                        sig_total += 1
-                        sig_paths.add(rel)
-                except OSError:
-                    pass
-        return total, sig_total, sig_paths
-
-    def calculate_coverage_quality(self, sig_paths, mapped):
-        """Coverage quality: what % of significant files are mapped?"""
-        if not sig_paths:
-            return 0.0
-        mapped_sig = sig_paths.intersection(mapped)
-        return round(len(mapped_sig) / len(sig_paths) * 100, 1)
-
     def update_stats(self):
         if not self.data:
             return
-        total, sig_total, sig_paths = self.scan_files()
+        
+        # Delegate to scanner
+        total, sig_total, sig_paths = self.scanner.scan_files()
 
         mapped = set()
         systems = self.data.get("systems", {})
@@ -167,7 +110,9 @@ class StateManager:
 
         mapped_sig = len(sig_paths.intersection(mapped))
         cov = (mapped_sig / sig_total * 100) if sig_total > 0 else 0.0
-        quality = self.calculate_coverage_quality(sig_paths, mapped)
+        
+        # Delegate to metrics
+        quality = calculate_coverage_quality(sig_paths, mapped)
 
         stats = self.data["metadata"]["scan_stats"]
         stats.update(
@@ -304,8 +249,9 @@ class StateManager:
                 return
             sys["description"] = desc
 
-        sys["clarity"] = self.compute_clarity(sys)
-        sys["completeness"] = self.compute_completeness(sys)
+        # Delegate to metrics
+        sys["clarity"] = compute_clarity(sys)
+        sys["completeness"] = compute_completeness(sys)
 
         print(f"{Colors.GREEN}✅ Updated metadata for: {name}{Colors.ENDC}")
         self.save_state()
@@ -319,8 +265,9 @@ class StateManager:
         sys["key_files"].extend(files)
         sys["key_files"] = list(set(sys["key_files"]))
 
-        sys["clarity"] = self.compute_clarity(sys)
-        sys["completeness"] = self.compute_completeness(sys)
+        # Delegate to metrics
+        sys["clarity"] = compute_clarity(sys)
+        sys["completeness"] = compute_completeness(sys)
 
         print(f"{Colors.GREEN}✅ Mapped {len(files)} files to: {name}{Colors.ENDC}")
         self.update_stats()
@@ -372,8 +319,9 @@ class StateManager:
         existing.append(text)
 
         sys = self.data["systems"][name]
-        sys["clarity"] = self.compute_clarity(sys)
-        sys["completeness"] = self.compute_completeness(sys)
+        # Delegate to metrics
+        sys["clarity"] = compute_clarity(sys)
+        sys["completeness"] = compute_completeness(sys)
 
         print(f"{Colors.GREEN}✅ Added insight to: {name}{Colors.ENDC}")
         self.save_state()
@@ -395,8 +343,9 @@ class StateManager:
         sys = self.data["systems"][name]
         sys["dependencies"].append({"system": target, "reason": reason})
 
-        sys["clarity"] = self.compute_clarity(sys)
-        sys["completeness"] = self.compute_completeness(sys)
+        # Delegate to metrics
+        sys["clarity"] = compute_clarity(sys)
+        sys["completeness"] = compute_completeness(sys)
 
         print(f"{Colors.GREEN}✅ Linked {name} -> {target}{Colors.ENDC}")
         self.save_state()
@@ -438,7 +387,8 @@ class StateManager:
                         f"{name}: References non-existent system '{dep['system']}'"
                     )
 
-        total, sig_total, sig_paths = self.scan_files()
+        # Delegate to scanner
+        total, sig_total, sig_paths = self.scanner.scan_files()
         mapped = set()
         for sys in systems.values():
             mapped.update(sys["key_files"])
@@ -456,41 +406,6 @@ class StateManager:
             )
 
         return errors
-
-    def compute_clarity(self, sys):
-        insight_count = len(sys.get("insights", []))
-        has_deps = len(sys.get("dependencies", [])) > 0
-
-        file_count = len(sys.get("key_files", []))
-        file_score = min(file_count / 10.0, 1.0) * 40
-        insight_score = min(insight_count / 5.0, 1.0) * 35
-        dep_score = 15 if has_deps else 0
-        base_completeness = int(file_score + insight_score + dep_score)
-
-        if insight_count >= 5 and base_completeness >= 70 and has_deps:
-            return "high"
-
-        if insight_count >= 3 and base_completeness >= 40:
-            return "medium"
-
-        return "low"
-
-    def compute_completeness(self, sys):
-        file_count = len(sys.get("key_files", []))
-        file_score = min(file_count / 10.0, 1.0) * 40
-
-        insight_count = len(sys.get("insights", []))
-        insight_score = min(insight_count / 5.0, 1.0) * 35
-
-        has_deps = len(sys.get("dependencies", [])) > 0
-        dep_score = 15 if has_deps else 0
-
-        clarity = sys.get("clarity", "low")
-        clarity_map = {"high": 10, "medium": 5, "low": 0}
-        clarity_score = clarity_map.get(clarity, 0)
-
-        total = file_score + insight_score + dep_score + clarity_score
-        return int(min(total, 100))
 
     # --- REPORTING ---
     def print_status(self):
@@ -587,7 +502,8 @@ class StateManager:
         if not self.data:
             return
 
-        total, sig_total, sig_paths = self.scan_files()
+        # Delegate to scanner
+        total, sig_total, sig_paths = self.scanner.scan_files()
         mapped = set()
         for s in self.data["systems"].values():
             mapped.update(s["key_files"])
