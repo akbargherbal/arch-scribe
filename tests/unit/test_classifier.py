@@ -35,3 +35,35 @@ def test_custom_config_directories():
     classifier = FileClassifier()
     # 'wordlists' is in the config list we added to constants.py
     assert classifier.is_significant("wordlists/russian.txt", 5000) is False
+
+def test_extension_classification():
+    classifier = FileClassifier()
+    
+    # Code files - always significant if >1KB
+    assert classifier.is_significant("app.py", 2048) is True
+    assert classifier.is_significant("main.ts", 3000) is True
+    
+    # Data files - never significant
+    assert classifier.is_significant("export.csv", 100000) is False
+    assert classifier.is_significant("data.sqlite", 50000) is False
+    assert classifier.is_significant("README.md", 5000) is False
+    
+    # Config files - size dependent
+    assert classifier.is_significant("small.json", 2048) is True    # <50KB
+    assert classifier.is_significant("huge.json", 100000) is False  # >50KB (likely data)
+    
+    # Dockerfile special case
+    assert classifier.is_significant("Dockerfile", 1500) is True
+
+def test_monkeytype_word_lists():
+    """Specific test for Monkeytype's JSON word lists"""
+    classifier = FileClassifier()
+    
+    # Large JSON in data directory (caught by directory check)
+    assert classifier.is_significant("static/wordlists/russian_50k.json", 1300000) is False
+    
+    # Large JSON in root (caught by config size check)
+    assert classifier.is_significant("russian_50k.json", 1300000) is False
+    
+    # Small JSON config in root
+    assert classifier.is_significant("package.json", 2048) is True

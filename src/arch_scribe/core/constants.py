@@ -12,6 +12,7 @@ SIGNIFICANT_SIZE_KB = 1
 CLASSIFICATION_CONFIG = {
     "min_size_bytes": 100,
     "size_threshold_kb": 1,
+    "max_config_size_kb": 50,  # Config files larger than this are likely data/generated
     "data_directories": [
         'data', 'assets', 'static', 'public', 'resources',
         'fixtures', 'samples', 'wordlists', 'locales', 'sounds', 'themes'
