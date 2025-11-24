@@ -10,7 +10,7 @@ from unittest.mock import patch  # [FIX] Added missing import
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager, STATE_FILE, BACKUP_FILE
+from src.arch_scribe.arch_state import StateManager, STATE_FILE, BACKUP_FILE
 
 class TestSaveLoadCycle:
     """Test save/load integrity."""

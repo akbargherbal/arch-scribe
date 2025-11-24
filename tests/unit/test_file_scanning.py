@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager, IGNORE_DIRS
+from src.arch_scribe.arch_state import StateManager, IGNORE_DIRS
 
 class TestGitignoreLoading:
     """Test .gitignore parsing."""

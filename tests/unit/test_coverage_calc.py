@@ -7,7 +7,7 @@ import os
 import tempfile
 import shutil
 import json
-from arch_state import StateManager
+from src.arch_scribe.arch_state import StateManager
 
 class TestCoverageCalculation:
     """Test suite for coverage calculation functions"""

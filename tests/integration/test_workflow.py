@@ -8,7 +8,7 @@ import json
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager, STATE_FILE
+from src.arch_scribe.arch_state import StateManager
 
 class TestSystemCreationWorkflow:
     """Test complete system creation workflow."""

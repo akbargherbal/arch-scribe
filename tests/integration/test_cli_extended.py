@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import main, STATE_FILE
+from src.arch_scribe.arch_state import main, STATE_FILE
 
 @pytest.fixture
 def cli_runner(temp_dir, monkeypatch):

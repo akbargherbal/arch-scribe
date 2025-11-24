@@ -7,7 +7,9 @@ import os
 import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager, STATE_FILE
+print(sys.path)
+from src.arch_scribe.arch_state import StateManager, STATE_FILE
+
 
 @pytest.mark.e2e
 @pytest.mark.slow

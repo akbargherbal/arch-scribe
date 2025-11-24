@@ -8,7 +8,7 @@ import json
 from unittest.mock import patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager
+from src.arch_scribe.arch_state import StateManager 
 
 class TestProjectDetectionExtended:
     """Test detection of less common project types."""

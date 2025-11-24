@@ -13,7 +13,7 @@ from unittest.mock import patch, mock_open
 
 # Add project root to path to import arch_state
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager, STATE_FILE, BACKUP_FILE
+from src.arch_scribe.arch_state import StateManager, STATE_FILE, BACKUP_FILE
 
 class TestStateManagerInit:
     """Test StateManager initialization and setup."""

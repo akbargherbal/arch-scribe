@@ -6,12 +6,11 @@ import sys
 import os
 import unittest
 import copy
-from arch_state import StateManager, DEFAULT_STATE
+from src.arch_scribe.arch_state import StateManager, DEFAULT_STATE
 import tempfile
 from unittest.mock import patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from arch_state import StateManager
 
 class TestSchemaValidation:
     """Test validate_schema() function."""
