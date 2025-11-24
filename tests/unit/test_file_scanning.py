@@ -129,3 +129,25 @@ class TestFileScanning:
             # Should count towards total but not crash
             assert total == 1
             assert sig_total == 0
+    def test_scan_ignores_data_directories(self, temp_dir, monkeypatch):
+        """Test that files in data directories aren't counted as significant"""
+        monkeypatch.chdir(temp_dir)
+        
+        os.makedirs("src")
+        os.makedirs("data")
+        
+        # Real code file
+        with open("src/main.py", "w") as f:
+            f.write("a" * 2048)  # 2KB
+        
+        # Large data file
+        with open("data/words.txt", "w") as f:
+            f.write("a" * 100000)  # 100KB
+        
+        scanner = FileScanner()
+        total, sig_total, sig_paths = scanner.scan_files()
+        
+        assert total == 2
+        assert sig_total == 1  # Only main.py
+        assert "src/main.py" in sig_paths
+        assert "data/words.txt" not in sig_paths
