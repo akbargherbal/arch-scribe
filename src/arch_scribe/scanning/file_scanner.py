@@ -1,10 +1,12 @@
 import os
 import fnmatch
-from ..core.constants import IGNORE_DIRS, IGNORE_EXTS, SIGNIFICANT_SIZE_KB
+from ..core.constants import IGNORE_DIRS, IGNORE_EXTS
+from .classifier import FileClassifier
 
 class FileScanner:
     def __init__(self):
         self.ignore_patterns = self.load_gitignore()
+        self.classifier = FileClassifier()
 
     def load_gitignore(self):
         """Parses .gitignore to augment IGNORE_DIRS"""
@@ -48,7 +50,9 @@ class FileScanner:
 
                 total += 1
                 try:
-                    if os.path.getsize(path) / 1024 >= SIGNIFICANT_SIZE_KB:
+                    # Delegate to classifier
+                    size = os.path.getsize(path)
+                    if self.classifier.is_significant(rel, size):
                         sig_total += 1
                         sig_paths.add(rel)
                 except OSError:

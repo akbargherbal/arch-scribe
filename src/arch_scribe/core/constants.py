@@ -4,7 +4,15 @@ import datetime
 STATE_FILE = "architecture.json"
 BACKUP_FILE = "architecture.json.backup"
 SESSION_FILE = ".session_start"
+
+# Legacy threshold - kept for backward compatibility in Phase 1
 SIGNIFICANT_SIZE_KB = 1
+
+# New classification config (Phase 1 preparation)
+CLASSIFICATION_CONFIG = {
+    "min_size_bytes": 100,  # Files under 100 bytes are never significant
+    "size_threshold_kb": 1,  # Default fallback
+}
 
 # Base ignores - will be augmented by .gitignore
 IGNORE_DIRS = {
