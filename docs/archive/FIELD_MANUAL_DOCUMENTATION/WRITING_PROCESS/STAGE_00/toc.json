@@ -1,0 +1,232 @@
+{
+  "field_manual_structure": {
+    "parts": [
+      {
+        "part_number": 1,
+        "title": "Genesis",
+        "subtitle": "The morning I decided to automate documentation",
+        "date": "Nov 18",
+        "key_topics": [
+          "The core problem (reading unfamiliar codebases)",
+          "The insight (two-phase architecture)",
+          "The unresolved questions",
+          "Setting out to design it properly"
+        ]
+      },
+      {
+        "part_number": 2,
+        "title": "The Design Sprint",
+        "subtitle": "Four hours that saved the project",
+        "date": "Nov 18-20",
+        "key_topics": [
+          "Answering the hard questions before coding",
+          "The CLI clarification moment",
+          "Schema design as constraint design",
+          "Why seeding works"
+        ]
+      },
+      {
+        "part_number": 3,
+        "title": "The First Disaster",
+        "subtitle": "When theory met reality and reality won",
+        "date": "Nov 20 Evening",
+        "key_topics": [
+          "git-truck test",
+          "144.6% coverage quality",
+          "The hollow victory",
+          "Walking away for two days"
+        ]
+      },
+      {
+        "part_number": 4,
+        "title": "The Cooling Period",
+        "subtitle": "Sometimes the best work is stepping away",
+        "date": "Nov 21-22",
+        "key_topics": [
+          "The exhaustion-to-insight pattern",
+          "Why breaks matter",
+          "Returning with fresh framing"
+        ]
+      },
+      {
+        "part_number": 5,
+        "title": "The Debugging Innovation",
+        "subtitle": "Using Claude to critique Claude",
+        "date": "Nov 23 Morning",
+        "key_topics": [
+          "The meta-LLM insight",
+          "Three-phase critique process",
+          "The SWOT breakthrough",
+          "Discovering the Trust vs. Verification Matrix"
+        ]
+      },
+      {
+        "part_number": 6,
+        "title": "The Quality Sprint",
+        "subtitle": "Don't persuade them - make it impossible to cheat",
+        "date": "Nov 23 Afternoon",
+        "key_topics": [
+          "Five systematic fixes",
+          "Architectural prevention over prompting",
+          "The transformation: trust-based → evidence-based",
+          "All tests passing by evening"
+        ]
+      },
+      {
+        "part_number": 7,
+        "title": "The Overcorrection",
+        "subtitle": "Fixed one problem, created another",
+        "date": "Nov 23-24",
+        "key_topics": [
+          "The turtle problem emerges",
+          "9% after 12 sessions - something's wrong",
+          "Discovering the file classification bottleneck"
+        ]
+      },
+      {
+        "part_number": 8,
+        "title": "The Token Economics Crisis",
+        "subtitle": "When the codebase itself prevents debugging",
+        "date": "Nov 24 ~20:35",
+        "key_topics": [
+          "40% of my tokens are just uploading the script",
+          "The God Script anti-pattern",
+          "The forcing function realization",
+          "Emergency refactoring decision"
+        ]
+      },
+      {
+        "part_number": 9,
+        "title": "The Classification Fix",
+        "subtitle": "From 1,172 files to 300",
+        "date": "Nov 24 Evening",
+        "key_topics": [
+          "Planning the 4-phase battle plan",
+          "2-hour implementation sprint",
+          "Victory: 56% coverage in 9 sessions",
+          "But my wrists hurt..."
+        ]
+      },
+      {
+        "part_number": 10,
+        "title": "The Ergonomics Crisis",
+        "subtitle": "A technically correct system that causes physical pain",
+        "date": "Nov 24 Evening",
+        "key_topics": [
+          "The copy-paste hell",
+          "Why am I the middleman?",
+          "The agent question emerges",
+          "Can I afford to automate?"
+        ]
+      },
+      {
+        "part_number": 11,
+        "title": "The Flash Question",
+        "subtitle": "Bad at coding - but what about comprehension?",
+        "date": "Nov 25",
+        "key_topics": [
+          "The hypothesis: generation ≠ comprehension",
+          "Designing the benchmark",
+          "Using Claude to test Flash",
+          "30 minutes of API calls"
+        ]
+      },
+      {
+        "part_number": 12,
+        "title": "The Validation Results",
+        "subtitle": "92.6% exceptional - this changes everything",
+        "date": "Nov 25",
+        "key_topics": [
+          "The shock of zero hallucinations",
+          "Understanding the 7.4% gap",
+          "Economic sustainability unlocked",
+          "Confidence to proceed"
+        ]
+      },
+      {
+        "part_number": 13,
+        "title": "The Integration Struggle",
+        "subtitle": "2 hours to make a command work",
+        "date": "Nov 26 Morning",
+        "key_topics": [
+          "GCLI expectations vs reality",
+          "Command discovery process",
+          "Three-layer registration",
+          "Validation prompt hell"
+        ]
+      },
+      {
+        "part_number": 14,
+        "title": "The Victory",
+        "subtitle": "30 minutes to 83%",
+        "date": "Nov 26 Afternoon",
+        "key_topics": [
+          "The production test",
+          "24x velocity multiplier",
+          "Nothing out of the ordinary",
+          "THE PIPELINE WORKS"
+        ]
+      },
+      {
+        "part_number": 15,
+        "title": "The Synthesis",
+        "subtitle": "Single session, complete document",
+        "date": "Nov 26 Evening",
+        "key_topics": [
+          "Phase 2 test",
+          "Claude's speed at prose",
+          "Incremental assembly",
+          "But how good is it?"
+        ]
+      },
+      {
+        "part_number": 16,
+        "title": "The Quality Question",
+        "subtitle": "How can I know if this is any good?",
+        "date": "Nov 26 ~10:00 AM",
+        "key_topics": [
+          "The validation paradox",
+          "Another idea has to be employed",
+          "Deploying the Public Prosecutor",
+          "Legal system architecture"
+        ]
+      },
+      {
+        "part_number": 17,
+        "title": "The Adversarial Process",
+        "subtitle": "Claude calling Claude's work garbage",
+        "date": "Nov 26 ~10:20 AM",
+        "key_topics": [
+          "PP's aggressive critique",
+          "LOW CONFIDENCE verdict",
+          "The shock moment",
+          "Cassation Court to the rescue"
+        ]
+      },
+      {
+        "part_number": 18,
+        "title": "The Verdict",
+        "subtitle": "75% accurate - and that's actually excellent",
+        "date": "Nov 26 ~10:50 AM",
+        "key_topics": [
+          "Systematic verification",
+          "2 real errors, 5 false positives",
+          "The fix session",
+          "Now I'm quite assured"
+        ]
+      },
+      {
+        "part_number": 19,
+        "title": "Reflection",
+        "subtitle": "What this week taught me",
+        "date": "Nov 18-27 (retrospective)",
+        "key_topics": [
+          "The key patterns discovered",
+          "When to trust, when to verify",
+          "The continuous learning cycle",
+          "What's next"
+        ]
+      }
+    ]
+  }
+}

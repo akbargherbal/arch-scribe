@@ -38,16 +38,18 @@ If updating in place is difficult during a session, write an addendum for that s
 
 ## 📅 PROJECT TIMELINE
 
-| Date          | Milestone                         | Status                  |
-| ------------- | --------------------------------- | ----------------------- |
-| **Nov 18**    | Inception document                | ✅ Reviewed (Session 1) |
-| **Nov 18-20** | Design → Implementation (Gap 1)   | ✅ Resolved (Session 2) |
-| **Nov 20**    | Initial Commit (2,321 lines)      | ✅ Reviewed (Session 1) |
-| **Nov 20 PM** | git-truck disaster (144% bug)     | ✅ Analyzed (Session 3) |
-| **Nov 21-22** | Cooling-off period (Gap 5)        | ✅ Resolved (Session 4) |
-| **Nov 23**    | LLM critique & Quality Sprint     | ✅ Analyzed (Session 4) |
-| **Nov 24**    | Refactoring & file classification | ✅ Analyzed (Session 4) |
-| **Nov 26**    | Field Manual documentation        | ✅ In progress          |
+| Date           | Milestone                                  | Status                  |
+| -------------- | ------------------------------------------ | ----------------------- |
+| **Nov 18**     | Inception document                         | ✅ Reviewed (Session 1) |
+| **Nov 18-20**  | Design → Implementation (Gap 1)            | ✅ Resolved (Session 2) |
+| **Nov 20**     | Initial Commit (2,321 lines)               | ✅ Reviewed (Session 1) |
+| **Nov 20 PM**  | git-truck disaster (144% bug)              | ✅ Analyzed (Session 3) |
+| **Nov 21-22**  | Cooling-off period (Gap 5)                 | ✅ Resolved (Session 4) |
+| **Nov 23**     | LLM critique & Quality Sprint              | ✅ Analyzed (Session 4) |
+| **Nov 24**     | Refactoring & file classification          | ✅ Analyzed (Session 4) |
+| **Nov 24 Eve** | Field testing & ergonomics crisis          | ✅ Analyzed (Session 5) |
+| **Nov 25**     | Gemini Flash comprehension benchmark       | ✅ Analyzed (Session 5) |
+| **Nov 26**     | Gemini CLI integration + Field Manual docs | ✅ In progress          |
 
 ---
 
@@ -438,121 +440,46 @@ python arch_scribe.py insight "Auth System" "Handles auth"
 # System computes from evidence
 python arch_scribe.py add "Auth System"  # No subjective params
 python arch_scribe.py map "Auth System" login.py tokens.py sessions.py
-python arch_scribe.py insight "Auth System" "Implements JWT refresh using Redis cache..."
-# Result: Completeness = f(3 files, 1 quality insight, 0 deps) = 27%
-#         Clarity = "low" (needs more insights)
+python arch_scribe.py insight "Auth System" "The authentication system uses JWT for token-based auth, with refresh mechanisms implemented in sessions.py, ensuring secure user identity verification across API endpoints."
+# Result: Validated, computed metrics
 ```
+
+**What Changed:** From LLM self-grading to system-enforced evidence-based metrics.
+**Why It Changed:** To prevent gaming and ensure substance in `architecture.json`.
+**What We Learned:** Architectural constraints beat prompt persuasion for reliability.
 
 ---
 
-## 🔥 THE OVERCORRECTION CRISIS (Nov 23-24)
+## 🐢 THE OVERCORRECTION CRISIS: The Turtle Problem (Nov 23-24)
 
-### **The Pendulum Swing: From Gaming to Paralysis**
+### **The New Problem Emerges**
 
-**What We Fixed on Nov 23:**
+**Test Subject:** `monkeytype` repository (real-world Python codebase with large non-code files like 1.3MB word lists)
 
-- ✅ LLM can't game metrics anymore (144% bug eliminated)
-- ✅ All quality gates enforced (15-word insights, WHAT+HOW+WHY structure)
-- ✅ Computed completeness (no manual --comp parameter)
-- ✅ Mathematical correctness (coverage can't exceed 100%)
+**Expected Behavior Post-Fix:**
 
-**What We Accidentally Broke:**  
-After implementing the anti-gaming protections, real-world testing revealed a catastrophic performance problem:
+- Balanced exploration: 10-15 sessions to 90% coverage
+- Meaningful insights accumulating
+- Stopping criteria triggering naturally
 
-- ❌ 12-13 sessions → only 9% coverage
-- ❌ Extrapolated nightmare: At this rate, reaching 90% coverage would require ~120+ sessions
-- ❌ The Turtle Problem: System moved so slowly it was effectively unusable
+**Actual Behavior:**
 
-### **Root Cause: Overcorrection in File Classification**
+- ⚠️ **Turtle pace:** Only 9% coverage after 12 sessions
+- ⚠️ **Overly cautious LLM:** Spending sessions on trivial details
+- ⚠️ **File classification bottleneck:** Treating massive word lists as "significant"
+- ⚠️ **Stuck in loops:** Diminishing returns gate not triggering due to slow progress
 
-The quality gates were SO strict that legitimate exploration became nearly impossible:
+**Root Cause Analysis:**
 
-```python
-# The Constraints That Strangled Progress:
-- Map 3 files → +12 points (4 points × 3 files)
-- Write 1 quality insight → +7 points
-- Total per session: ~19 points
-- Need 80+ points per system to reach "complete"
-- Need to repeat for EVERY system discovered
+- The quality fixes worked TOO well—prevented shallow insights but also slowed discovery
+- SIGNIFICANT_SIZE_KB = 1 treated all files >1KB as significant, including 1.3MB data files
+- Result: Significant files bloated from ~300 to 1,172, making coverage % artificially low
 
-# Math doesn't math:
-# 90% coverage / 9% per 12 sessions = ~120 sessions needed
-```
+**The Token Economics Crisis**
 
-The Critical Engineering Lesson:  
-"We fixed one problem (LLM cheating) but created the opposite problem (system paralysis). The file classification logic wasn't just preventing gaming—it was preventing functioning."
-
-**Classic Overcorrection Pattern:**  
-Discover vulnerability (LLM gaming metrics) → Add strict validation (quality gates) → Test in production → Opposite problem emerges → The pendulum swung too far
-
-**The Monkeytype Case Study (Revealed in Documents):**
-
-- Reported: 1,172 "significant" files → 13.6% coverage
-- Reality:
-  - ✅ 250-350 actual code files
-  - ❌ 413 language word lists (e.g., russian_50k.json = 1.3MB!)
-  - ❌ 79 keyboard layouts
-  - ❌ 78 quote collections
-  - ❌ 19 theme configs
-  - ❌ Hundreds of sound effect files
-
-The Realization:  
-"A 2KB authentication controller is treated the same as a 1.3MB word list!" (SIGNIFICANT_SIZE_KB = 1 treating ALL files >1KB as significant)
-
----
-
-## 🚨 THE TOKEN ECONOMICS CRISIS (Nov 24)
-
-### **The Triple Crisis**
-
-- **Performance Crisis:** System paralyzed (9% in 12 sessions)
-- **Debugging Crisis:** Need to fix file classification logic
-- **Token Economics Crisis:** Can't debug efficiently due to monolithic codebase
-
-### **The Debugging Bottleneck Revealed**
-
-The developer discovered the file classification bug needed fixing, but encountered a meta-problem: the codebase itself prevented efficient iteration.
-
-```
-┌─────────────────────────────────────────────────┐
-│ Problem: File classification is broken          │
-│          (causing turtle-speed coverage)        │
-└────────────────┬────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────┐
-│ Need to: Debug and iterate on classification    │
-│          logic with Claude's help               │
-└────────────────┬────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────┐
-│ Obstacle: arch_state.py is 1,000+ lines         │
-│           (monolithic "God script")             │
-└────────────────┬────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────┐
-│ Result: Each Claude debugging session:          │
-│   • 40% tokens → uploading script               │
-│   • 60% tokens → actual debugging               │
-│   • 2-3 iterations max → token limit hit        │
-│   • Session ends → restart → re-upload → repeat │
-└─────────────────────────────────────────────────┘
-```
-
-Developer's Testimony:  
-"I didn't care about refactoring until it caused a serious problem! My tokens per session are used up, so I have to restart another session repeatedly. The 'God script' was handling everything from A to Z—over 1,000 lines that I have to carry with me to each chat session just to refactor the smallest thing. Planning takes a multi-session process with a Python script that consumes almost 40% of the token space allocated to a session. After a couple of iterations of fixes, my chat session ends, and I have to start another session."
-
-### **🧠 THE TOKEN ECONOMICS FORCING FUNCTION**
-
-**The Pattern Discovered**
-
-Key Insight:  
-Context window limits don't just slow you down—they force architectural decisions you wouldn't otherwise make.
-
-**The Token Economics Lifecycle:**
-
-| Phase         | Codebase State            | Debugging Experience           | Decision Trigger        |
+| Phase         | Codebase State            | Token Overhead/Session         | Iteration Impact        |
 | ------------- | ------------------------- | ------------------------------ | ----------------------- |
-| Early         | Monolithic (< 500 lines)  | Fine - fits in context         | No pressure to refactor |
+| Early         | No pressure to refactor   | No pressure to refactor        | No pressure to refactor |
 | Growth        | Growing (500-1000 lines)  | Acceptable - some overhead     | Tolerable friction      |
 | Crisis        | Monolithic (1,000+ lines) | 40% token overhead per session | Forced refactoring      |
 | Post-Refactor | Modular                   | Only load relevant modules     | Efficient iteration     |
@@ -759,6 +686,157 @@ CLASSIFICATION_CONFIG = {
 
 ---
 
+## 🚀 THE ERGONOMICS CRISIS & FIELD TESTING (Nov 24 Evening)
+
+### **System Validation Success**
+
+**Test Subject:** Continued with `monkeytype` post-stabilization.
+
+**Results:**
+
+- ✅ 9 sessions → 56% coverage (vs. pre-fix 9% in 12 sessions)
+- ✅ File classification correctly ignoring non-code assets
+- ✅ Anti-gaming metrics preventing shallow entries
+- ✅ System architecture validated as sustainable
+
+**What Changed:** First successful field test at scale.
+**Why It Changed:** Refactoring and classification fixes removed previous bottlenecks.
+**What We Learned:** Technical stability is necessary but insufficient—usability emerges as the next constraint.
+
+### **The New Bottleneck: The Human Factor**
+
+**The Physical Reality:**
+
+> "Do I want to be the middleman who copies and pastes from the AI chatbot WebUI into my terminal and code editor? The amount of wrist strain was alarming."
+
+**The Copy-Paste Hell:**
+
+- Constant window switching (keyboard shortcuts + mouse for filenames)
+- Copy from WebUI → Paste to terminal → Copy output → Paste back
+- Repetitive strain from manual data piping
+- Human as the "glue" between LLM and CLI
+
+**The Realization:**
+
+> "Why not use an AI agent? But how do I manage the cost?"
+
+**Economic Constraints:**
+
+- Premium agents (Claude, GPT): Too expensive for toy projects
+- Gemini 2.5 Flash: Known poor at coding from prior tests
+- Gemini CLI: Buggy in August 2025
+- Need: Free automation without quality compromise
+
+**What Changed:** Shift from manual execution to agent exploration.
+**Why It Changed:** Ergonomics crisis made manual workflow unsustainable.
+**What We Learned:** A technically sound system can fail if human interaction causes physical or cognitive pain.
+
+---
+
+## 🔬 THE NOVEMBER 25 BREAKTHROUGH: Scientific Validation of Gemini 2.5 Flash
+
+### **The Critical Question**
+
+> "Gemini 2.5 Flash is definitely bad for coding — but is it bad at writing code, or also bad at comprehending and understanding code?"
+
+**Why This Matters:**
+
+- System Archaeologist role = comprehension task (reads code, identifies patterns)
+- No code writing required
+- If Flash comprehends well → Free automation unlocked
+- If not → Rely on expensive models → Project unsustainable
+
+### **The Hypothesis**
+
+**Task Decomposition:**
+
+- ❌ Flash weak at code generation (known)
+- ❓ Flash's code comprehension = untested
+- ✅ Archaeologist needs only comprehension
+
+**The Bet:**
+
+> "Models can be strong at comprehension while weak at generation."
+
+**What Changed:** Empirical testing of cheaper model for specific task.
+**Why It Changed:** Ergonomics and cost constraints forced agent evaluation.
+**What We Learned:** Decompose tasks by cognitive type to match cheapest capable model.
+
+### **The Meta-LLM Evaluation Methodology**
+
+**Three-Phase Scientific Process:**
+
+**Phase 1: Benchmark Design (Claude 4.5)**
+
+- 6 test scripts (~2,100 lines across TS/Python/JS/React)
+- Real frameworks (FastAPI, Django, Express, React)
+- Advanced patterns (concurrency, decorators, hooks)
+- 81 questions with scoring rubrics (structural, patterns, flows, designs, hallucinations)
+
+**Phase 2: Flash Evaluation (30 minutes)**
+
+- Fed scripts + questions to Gemini 2.5 Flash via API
+- No human intervention
+
+**Phase 3: Blind Grading (Claude 4.5, New Session)**
+
+- New session, no prior knowledge
+- Grade against rubrics: Exceptional (100%), Sufficient (50%), Hallucination (0%)
+
+**Why This Works:**
+
+- Eliminates bias (blind grading)
+- Leverages LLM strengths for design/evaluation
+- Scientific rigor at low cost
+
+### **The Results: Flash Exceeded Expectations**
+
+| Metric              | Result     |
+| ------------------- | ---------- |
+| **Total Questions** | 81         |
+| **Exceptional**     | 75 (92.6%) |
+| **Sufficient**      | 6 (7.4%)   |
+| **Hallucinations**  | **0 (0%)** |
+
+**Performance by Script:**
+
+| Script             | Domain           | Exceptional      | Sufficient | Hallucinations |
+| ------------------ | ---------------- | ---------------- | ---------- | -------------- |
+| FastAPI Auth       | Python (3 files) | **14/14 (100%)** | 0          | 0              |
+| Data Pipeline      | Python           | **13/13 (100%)** | 0          | 0              |
+| React Todo         | TypeScript       | 11/12 (91.7%)    | 1          | 0              |
+| Express Middleware | TypeScript       | 13/14 (92.9%)    | 1          | 0              |
+| Django Blog        | Python           | 12/15 (80%)      | 3          | 0              |
+| WebSocket Hook     | TypeScript       | 12/13 (92.3%)    | 1          | 0              |
+
+**Key Findings:**
+
+1. **Zero Hallucinations:** Critical for safety—never invented features.
+2. **Pattern Recognition Excellence:** Explained DI, unions, middleware, etc.
+3. **Flow Tracing Mastery:** Core Archaeologist skill.
+4. **Sufficient Gap (7.4%):** Lacked depth in complex areas but still correct.
+
+**What Changed:** Validated Flash for Phase 1 (exploration).
+**Why It Changed:** Data-driven confirmation of hypothesis.
+**What We Learned:** Benchmark-before-integration saves time and builds confidence.
+
+### **Strategic Validation & Cost Arbitrage**
+
+**Hypothesis Confirmed:** Flash excellent at comprehension (92.6% exceptional) despite generation weaknesses.
+
+**Unlocked Architecture:**
+
+- Flash for Phase 1 (free, fast)
+- Claude for Phase 2 (paid, synthesis)
+- ~90% cost reduction vs. all-premium
+
+**Economic Sustainability:**
+
+- Before: Premium agents unaffordable; manual execution painful
+- After: Free automation justified by evidence; project viable
+
+---
+
 ## 🎯 KEY INSIGHTS FOR THE FIELD MANUAL
 
 ### **1. The Overcorrection Pattern**
@@ -856,6 +934,163 @@ Phase 3: Second heuristic (extensions) → YELLOW
 Phase 4: Polish (statistical outliers) → GREEN
 ```
 
+### **6. The Ergonomics Forcing Function**
+
+**Pattern:**  
+Build working system → Field test at scale → Discover human is bottleneck → Automate human out of loop
+
+**The Three Bottlenecks:**
+
+1. **Design bottleneck** (Nov 18-20): Solved by design sprint
+2. **Architecture bottleneck** (Nov 24): Solved by refactoring + file classification
+3. **Ergonomics bottleneck** (Nov 25): Solved by agent validation
+
+**Lesson:**  
+"A technically correct system can still be unusable if the human interface causes physical pain."
+
+### **7. The Constraint-Driven Innovation Pattern**
+
+**The Meta-Pattern:**
+
+```
+Constraint → Forces Evaluation → Discovers "Good Enough" Solution → Unlocks Progress
+
+Example 1: Refactoring (Nov 24)
+- Constraint: Token limits prevent debugging
+- Solution: Modularize (not for "best practices" - for survival)
+- Unlock: Rapid iteration cycles
+
+Example 2: Agent Selection (Nov 25)
+- Constraint: Physical pain + can't afford premium agents
+- Question: "Is Flash bad at EVERYTHING or just writing code?"
+- Discovery: Flash comprehends code excellently
+- Solution: Use Flash for comprehension task
+- Unlock: Free, sustainable automation
+```
+
+**Philosophy:**  
+"It wasn't about following best practices; it was about facing the reality of constraints and finding what works within them."
+
+### **8. The Benchmark-Before-Integration Pattern**
+
+**Traditional Approach:**  
+Try tool → See if it works → Debug when it fails → Iterate blindly
+
+**Your Approach:**  
+Question capability → Design test → Validate scientifically → Then integrate confidently
+
+**Why This Matters:**
+
+- **Saves time:** Don't build on wrong foundation
+- **Provides confidence:** 92.6% exceptional = green light to proceed
+- **Creates reusable artifact:** Benchmark persists for future evaluations
+- **Eliminates guesswork:** Data-driven decision making
+
+### **9. The Meta-LLM Evaluation Framework**
+
+**The Pattern:**
+
+```
+┌─────────────────────────────────────────┐
+│ Superior LLM designs test               │
+│ (Claude creates scripts + questions)    │
+└───────────────┬─────────────────────────┘
+                ↓
+┌─────────────────────────────────────────┐
+│ Target LLM takes test                   │
+│ (Flash answers 81 questions)            │
+└───────────────┬─────────────────────────┘
+                ↓
+┌─────────────────────────────────────────┐
+│ Superior LLM grades (blind session)     │
+│ (Claude evaluates without knowing)      │
+└───────────────┬─────────────────────────┘
+                ↓
+          Scientific validation
+```
+
+**Why This Is Brilliant:**
+
+- **Eliminates human bias:** No subjective "feels good enough"
+- **Leverages LLM strengths:** Design, comprehension, consistent evaluation
+- **Self-validating:** Claude grades against its own rubric
+- **Economically efficient:** ~4-5 hours, minimal cost, scientific rigor
+- **Reproducible:** Can validate ANY model for ANY comprehension task
+
+**When to Use:**
+
+- Evaluating cheaper models for specific tasks
+- Validating "good enough" thresholds before committing
+- Eliminating subjective assessment in tool selection
+
+### **10. The Comprehension vs. Generation Split**
+
+**Discovery:**  
+Models can be strong at comprehension while weak at generation.
+
+**Task Analysis Framework:**
+
+| Task Type              | Requires                                         | Model Fit            |
+| ---------------------- | ------------------------------------------------ | -------------------- |
+| **Code Generation**    | Syntax mastery, debugging, architecture design   | Premium models only  |
+| **Code Comprehension** | Pattern recognition, flow tracing, summarization | Flash-level adequate |
+
+**Application:**
+
+- Don't assume "bad at coding" = "bad at reading code"
+- Decompose tasks by cognitive type
+- Economic arbitrage: Match task to cheapest capable model
+
+**System Archaeologist Match:**
+
+- Reads files: ✅ Comprehension
+- Identifies patterns: ✅ Comprehension
+- Traces flows: ✅ Comprehension
+- Generates structured notes: ✅ Templated output
+- Writes new code: ❌ NOT REQUIRED
+
+**Result:** Flash overqualified (92.6% exceptional vs. 80% threshold)
+
+### **11. The Zero-Hallucination Requirement**
+
+**Why Critical for Archaeologist:**  
+Hallucinations create false architectures → Narrative fiction → Late errors → Trust collapse
+
+**Flash's Performance:**  
+0% hallucinations, even in traps—said "not present" correctly.
+
+**Safety Principle:**  
+"A system that says 'I don't know' is infinitely safer than one that confidently invents answers."
+
+### **12. The "Good Enough" Economic Threshold**
+
+**Calculation:**
+
+- 80% exceptional acceptable (tolerable gaps)
+- Discovered: 92.6% (15.8% margin)
+
+**Win:**  
+Better-than-good-enough model enables zero-marginal-cost automation.
+
+**Implications:**
+
+- Phase 1: Free (Flash)
+- Phase 2: Paid (Claude)
+- Quality maintained at ~90% lower cost
+
+### **13. The Supervision Requirement (Foreshadowing)**
+
+**Reality Check:**  
+"You can't just give them the whole thing and go to sleep. You need to watch over them; sometimes they get stuck."
+
+**Human Role Shift:**
+
+- Before: Executor (copy-paste, strain)
+- After: Supervisor (intervene, validate)
+
+**Agent Truth:**  
+Agents loop/stuck; supervision << execution effort.
+
 ---
 
 ## 🧠 THE META-PATTERN: Using LLMs to Debug LLM-Guided Systems
@@ -941,9 +1176,27 @@ Phase 4: Polish (statistical outliers) → GREEN
 - What problems remained after the fixes? (Developer noted: "we fixed one problem but not all problems").
 - Developer notes: Eventually tested, but not immediately after Nov 24; it's a long process—defer to future sessions.
 
+### **Gap 6: Nov 24-26 Bridge**
+
+**Questions:**
+
+- What happened immediately after Flash validation (Nov 25)?
+- How was Gemini CLI integrated on Nov 26?
+- Details on persona modifications, command flows, safety protocols?
+- Supervision workflows and failure modes?
+- Tooling context: Gemini CLI's role in replacing File Sharing Protocol?
+
+### **Gap 7: Final Product Critique**
+
+**Questions:**
+
+- How did `architecture.json` from Flash feed into Narrative Architect?
+- Quality of final `ARCHITECTURE.md`?
+- Any post-Nov 26 refinements or tests?
+
 ---
 
-## 📝 CURRENT STATUS (END OF SESSION 4)
+## 📝 CURRENT STATUS (END OF SESSION 5)
 
 ### **Completed Analysis:**
 
@@ -958,58 +1211,60 @@ Phase 4: Polish (statistical outliers) → GREEN
 ✅ **Token Economics Crisis** (Nov 24) - God script prevents efficient debugging  
 ✅ **Emergency Refactoring** (Nov 24) - Modularization to enable iteration  
 ✅ **File Classification Fix** (Nov 24) - Phases 1-4 implementation, system stabilized  
-✅ **All Gaps Resolved** up to Nov 24, except deferred validation.
+✅ **Field Testing & Ergonomics Crisis** (Nov 24 Evening) - 56% success but human bottleneck  
+✅ **Flash Comprehension Breakthrough** (Nov 25) - Meta-LLM benchmark, 92.6% validation  
+✅ **All Gaps Resolved** up to Nov 25, except deferred validation and integration details.
 
 ### **In Progress:**
 
-⏳ Gap 4 - Real-world validation after fixes (deferred as per developer)
+⏳ Gap 4 - Real-world validation after fixes (deferred as per developer)  
+⏳ Gap 6 - Nov 24-26 bridge (Gemini CLI integration)  
+⏳ Gap 7 - Final product critique (`ARCHITECTURE.md`)
 
-### **Key Insights from Session 4:**
+### **Key Insights from Session 5:**
 
-**The Debugging Meta-Pattern:**  
-A reusable 6-step workflow for using a superior LLM to conduct a blind review, SWOT analysis, and guided implementation plan to fix architectural flaws in an LLM-guided system.
-
-**The Developer Psychology Pattern:**  
-The "Exhaustion-to-Insight" pattern highlights the value of stepping away after a significant failure to allow for problem reframing, leading to more robust solutions.
-
-**The Token Economics Forcing Function:**  
-Context window limits aren't just technical constraints—they're architectural forcing functions that make modular design necessary for iteration velocity.
-
-**The Overcorrection Pattern:**  
-Every strict fix creates the opposite problem. Must test at scale and rebalance between preventing abuse and enabling legitimate use.
-
-**The Emergency Refactoring Protocol:**  
-When codebase structure prevents debugging, stop fixing the bug and modularize first. One-time refactoring investment unlocks all future iteration.
+**The Ergonomics Forcing Function:** Human bottlenecks emerge after technical stability—automate to sustain.  
+**Constraint-Driven Innovation:** Constraints force targeted evaluations, unlocking "good enough" solutions.  
+**Benchmark-Before-Integration:** Scientific validation eliminates guesswork in tool selection.  
+**Meta-LLM Framework:** Reusable for model/task validation with bias elimination.  
+**Comprehension vs. Generation Split:** Enables cost arbitrage by task decomposition.  
+**Zero-Hallucination Safety:** Essential for trust in exploration phases.  
+**Good Enough Threshold:** Data-driven margins ensure sustainability.  
+**Supervision Shift:** Humans evolve from executors to overseers.
 
 ---
 
 ## 🎬 NARRATIVE ARC SO FAR
 
-Nov 18: "We have a vision!" (Inception document)  
- ↓  
-Nov 18-20: "Let's design it properly" (4-hour LLM-assisted sprint)  
- ↓  
-Nov 20: "We built it!" (2,321 lines, comprehensive implementation)  
- ↓  
-Nov 20: "The math isn't mathing" (144% coverage bug)  
- ↓  
-Nov 21-22: [Complete break - exhaustion → insight]  
- ↓  
-Nov 23: "Let's use Claude to critique the system" (LLM-assisted root cause analysis)  
- ↓  
-Nov 23: "Fixed all 5 vulnerabilities!" (Quality sprint, 5.5 hours)  
- ↓  
-Nov 23-24: "Wait... now it's TOO slow" (Overcorrection: 9% in 12 sessions)  
- ↓  
-Nov 24: "I can't even debug it efficiently" (Token economics crisis)  
- ↓  
-Nov 24: "Must refactor first, then fix" (Emergency modularization)  
- ↓  
-Nov 24: "File classification fixed in 4 phases" (Rapid iteration now possible)  
- ↓  
-Nov 24: "System stabilized" (README updated, V3 complete)  
- ↓  
-Nov 26: [Field Manual documentation begins]
+Nov 18: "We have a vision!" (Inception)  
+↓  
+Nov 18-20: "Let's design it properly" (4-hour sprint)  
+↓  
+Nov 20: "We built it!" (2,321 lines)  
+↓  
+Nov 20: "The math isn't mathing" (144% bug)  
+↓  
+Nov 21-22: [Cooling-off period]  
+↓  
+Nov 23: "Claude critique → Root cause analysis"  
+↓  
+Nov 23: "Fixed all 5 vulnerabilities" (Quality sprint)  
+↓  
+Nov 23-24: "Overcorrection → Turtle problem"  
+↓  
+Nov 24: "Token economics → Emergency refactoring"  
+↓  
+Nov 24: "File classification fixed → System stabilized"  
+↓  
+Nov 24 Eve: "Field test: 56% in 9 sessions! But my wrists hurt..."  
+↓  
+Nov 25: "Can Flash comprehend code? Let's find out scientifically."  
+↓  
+Nov 25: "Design benchmark → Test Flash → Blind grade → 92.6% exceptional!"  
+↓  
+Nov 25: "VALIDATED: Flash = production-ready for System Archaeologist"  
+↓  
+Nov 26: "Integrate Flash with Gemini CLI + Document journey" (Next session)
 
 **The Meta-Pattern:**  
 Every solution reveals the next problem. The journey from "it works" to "it works well" is a series of overcorrections, discoveries, and rebalancing acts. The process itself becomes the product.
@@ -1020,11 +1275,16 @@ Every solution reveals the next problem. The journey from "it works" to "it work
 
 ### **Priority: Continue Timeline**
 
-- What happened between Nov 24 (system stabilized) and Nov 26 (field manual documentation begins)?
-- Were there more refinements, testing, or new features?
-- What triggered the decision to start documenting the process itself?
+- Analyze Nov 26: Gemini CLI integration mechanics, persona modifications, command flows.
+- Resolve Gap 6: How CLI handles `arch_state.py` updates; failure modes; supervision.
+- Tooling context: CLI's launch, open-source nature, redundancy with File Sharing Protocol.
 
 ### **Secondary: Discuss Real-World Validation (Gap 4)**
 
-- Review the results of re-testing Arch-Scribe on `git-truck` after the fixes.
-- Uncover what "remaining problems" the developer alluded to.
+- Review post-fix tests on `git-truck`/`monkeytype`.
+- Uncover remaining problems alluded to by developer.
+
+### **Tertiary: Final Critique (Gap 7)**
+
+- Examine `architecture.json` → `ARCHITECTURE.md` pipeline.
+- Quality assessment of output.
